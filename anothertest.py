@@ -1,15 +1,6 @@
-from openai import OpenAI
-client = OpenAI()
+import google.generativeai as genai
 
-completion = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {
-            "role": "user",
-            "content": "Write a haiku about recursion in programming."
-        }
-    ]
-)
-
-print(completion.choices[0].message)
+genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+model = genai.GenerativeModel("gemini-1.5-flash")
+response = model.generate_content("Apple Smartwatch SE reviews")
+print(response.text)
