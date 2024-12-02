@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>This is test environment for Design and Programs</title>
+        <!-- PyScript CSS -->
+        <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css">
+        <!-- This script tag bootstraps PyScript -->
+        <script type="module" src="https://pyscript.net/alpha/pyscript.js"></script>
+        <!-- custom code -->
+        <script type="text/JavaScript">
+            function testjs(){
+                alert("Test is okay")
+            }
+
+            function formatAI(){
+                document.getElementById("resultAI").innerHTML = response;
+                alert("passed value");
+            }
+        </script>
+
+    </head>
+    <body>
+        <form name="generateResultAI" method="post" action="search_gadget_description">
+            Enter value to test: 
+            <input type="text" name="txtSearchValue"><br>
+            <input type="submit" value="Test click" name="testclick" onclick="formatAI()"><br>
+            <div hidden id="outputresult">  </div>
+            <div id="resultAI">{{message}}</div>
+        </form>
+    </body>
+</html>
