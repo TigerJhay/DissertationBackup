@@ -1,0 +1,22 @@
+        <form name="generateResultAI" method="post" action="search_gadget_description">
+            Enter value to test: 
+            <input type="text" name="txtSearchValue"><br>
+            <input type="submit" value="Test click" name="testclick" onclick="formatAI()"><br>
+            
+            {% with errors = get_flashed_messages(category_filter=["**"]) %}
+            {% if errors %}
+            <div class="alert-message block-message error">
+              <a class="close" href="#">TESTING 123×</a>
+              <ul>
+                {%- for msg in errors %}
+                <li>{{ msg }}</li>
+                {% endfor -%}
+              </ul>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% for message in get_flashed_messages() %}
+            <div id="resultAI">{{message}}</div>
+            {% endfor%}
+        </form>
