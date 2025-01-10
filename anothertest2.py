@@ -1,5 +1,4 @@
 import openai
-
 API_KEY = ("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")
 
 openai.api_key = API_KEY
