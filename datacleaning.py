@@ -5,7 +5,7 @@ import nltk
 from nltk.corpus import stopwords
 from numpy import array
 
-df = pd.read_excel("D:/Repository_Reviews2.xlsx")
+df = pd.read_excel("D:/My Documents/~Dissertation Files/SystemPrototype/DissertationBackup/templates/Repository_Reviews2.xlsx")
 df
 #df = pd.read_csv("D:/Repository_Reviews2.csv")
 df.shape
@@ -17,7 +17,6 @@ df["Product_Review"] = df["Product_Review"].str.replace("\n",' ')
 df
 
 nltk.download('stopwords')
-df["Product_Review"][0] = "Test"
 
 #URL and links removal
 testvalue = re.sub(r'http\S+', '', df["Product_Review"][2])
@@ -39,4 +38,4 @@ testvalue = re.sub(r'\s+', ' ', testvalue)
 #Stopword Removal
 stopword_pattern = re.compile(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*')
 testvalue = stopword_pattern.sub('', testvalue)
-testvalue
+print (testvalue)
