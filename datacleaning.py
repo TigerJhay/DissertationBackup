@@ -62,6 +62,10 @@ df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) +
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
 
+
+#----------------------------------------------------------
+#This portion is part of Naive Bayes, Multinomial Algorithm
+#----------------------------------------------------------
 vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
 
 y_val = df_reviews['Rating']
