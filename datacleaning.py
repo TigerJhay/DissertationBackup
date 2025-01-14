@@ -2,40 +2,55 @@ import pandas as pd
 import numpy as np
 import re
 import nltk 
+import sklearn
+
 from nltk.corpus import stopwords
 from numpy import array
 
-df = pd.read_excel("D:/My Documents/~Dissertation Files/SystemPrototype/DissertationBackup/templates/Repository_Reviews2.xlsx")
-df
-#df = pd.read_csv("D:/Repository_Reviews2.csv")
-df.shape
-df.head(5)
-
-df = df.drop(columns = "BrndNo")
-df = df.drop(columns = "GDNo")
-df["Product_Review"] = df["Product_Review"].str.replace("\n",' ')
-df
-
 nltk.download('stopwords')
 
-#URL and links removal
-testvalue = re.sub(r'http\S+', '', df["Product_Review"][2])
-testvalue = re.sub(r"x000D",'',testvalue)
+#Access and load the dataset record of reviews
+df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
+df_reviews.head(20)
+
+df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+
+# Checking for missing values. Fill necessary and drop if reviews are null
+if df_reviews["Username"].isnull().values.any() == True:
+    df_reviews["Username"] = df_reviews["Username"].fillna("NO_VALUE")        
+if df_reviews["Date"].isnull().values.any() == True:
+    df_reviews["Date"] = df_reviews["Date"].fillna("1/1/11")
+if df_reviews["Reviews"].isnull().values.any() == True:
+    df_reviews["Reviews"] = df_reviews["Reviews"].dropna()
+
+df_reviews.head(20)
+
+
+df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
+df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
+
+#Removal of URL and Links inside of reviews column
+df_reviews = df_reviews.replace(r'http\S+', '', regex=True)
+df_reviews = df_reviews.replace(r"x000D", '', regex=True)
+#df_reviews["Reviews"][400]
 
 #html tag removal
-tag_rem = re.compile(r'<[^>]+>')
-testvalue = tag_rem.sub('', testvalue)
+df_reviews = df_reviews.replace(r'<[^>]+>', '', regex= True)
+#tag_rem = re.compile(r'<[^>]+>')
+#df_reviews = tag_rem.sub('', df_reviews["Reviews"])
 
 #punctuation and character removal
-testvalue = re.sub('[^a-zA-Z0-9]',' ', testvalue)
+df_reviews = df_reviews.replace('[^a-zA-Z0-9]', ' ', regex=True)
+#testvalue = re.sub('[^a-zA-Z0-9]',' ', testvalue)
 
 #Single Character Removal
-testvalue = re.sub(r"\s+[a-zA-Z]\s+", ' ', testvalue)
+df_reviews = df_reviews.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
 
 #Multiple Spaces Removal
-testvalue = re.sub(r'\s+', ' ', testvalue)
+df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 
 #Stopword Removal
-stopword_pattern = re.compile(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*')
-testvalue = stopword_pattern.sub('', testvalue)
-print (testvalue)
+df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
+df_reviews["Reviews"][2]
+
+
