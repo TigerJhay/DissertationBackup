@@ -2,13 +2,19 @@ import pandas as pd
 import numpy as np
 import re
 import nltk 
-import sklearn
-
+#import sklearn
 from nltk.corpus import stopwords
 from numpy import array
+from sklearn.feature_extraction.text import CountVectorizer
+
+
+#custom stopwords, words that are not on nltk.stopwords. These words are not essential in reviews of gadgets.
+custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
+
+#countvec = CountVectorizer(custom_stopwords)
+
 
 nltk.download('stopwords')
-
 #Access and load the dataset record of reviews
 df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
@@ -23,7 +29,7 @@ if df_reviews["Date"].isnull().values.any() == True:
 if df_reviews["Reviews"].isnull().values.any() == True:
     df_reviews["Reviews"] = df_reviews["Reviews"].dropna()
 
-df_reviews.head(20)
+#df_reviews.head(20)
 
 
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
@@ -51,6 +57,6 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 
 #Stopword Removal
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
-df_reviews["Reviews"][2]
+df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-
+df_reviews
