@@ -22,18 +22,15 @@ df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 
-vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
-y_val = df_reviews['Rating']
-x_val = vectorizer df_reviews['Reviews']
-
 # Checking for missing values. Fill necessary and drop if reviews are null
 if df_reviews["Username"].isnull().values.any() == True:
-    df_reviews["Username"] = df_reviews["Username"].fillna("NO_VALUE")        
+    df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
 if df_reviews["Date"].isnull().values.any() == True:
     df_reviews["Date"] = df_reviews["Date"].fillna("1/1/11")
 if df_reviews["Reviews"].isnull().values.any() == True:
-    df_reviews["Reviews"] = df_reviews["Reviews"].dropna()
+    df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
+df_reviews
 #df_reviews.head(20)
 
 
@@ -64,3 +61,20 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
+
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+
+y_val = df_reviews['Rating']
+
+#fitting and transform
+x_val = vectorize.fit_transform(df_reviews['Reviews'])
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, random_state=50, test_size=.20)
+classifier = naive_bayes.MultinomialNB()
+classifier.fit(x_train, y_train)
+
+roc_auc_score(y_test, classifier.predict_proba(x_test), multi_class='ovo')
+
+gadget_review_array = np.array(["bullshit"])
+gadget_review_vector = vectorize.transform(gadget_review_array)
+valuearray = classifier.predict(gadget_review_vector)
+valuearray
