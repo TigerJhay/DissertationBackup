@@ -1,18 +1,19 @@
 import pandas as pd
 import numpy as np
+from numpy import array
 import re
 import nltk 
-#import sklearn
 from nltk.corpus import stopwords
-from numpy import array
 from sklearn.feature_extraction.text import CountVectorizer
-
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn import naive_bayes
+from sklearn.metrics import roc_auc_score
 
 #custom stopwords, words that are not on nltk.stopwords. These words are not essential in reviews of gadgets.
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
 #countvec = CountVectorizer(custom_stopwords)
-
 
 nltk.download('stopwords')
 #Access and load the dataset record of reviews
@@ -20,6 +21,10 @@ df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+y_val = df_reviews['Rating']
+x_val = vectorizer df_reviews['Reviews']
 
 # Checking for missing values. Fill necessary and drop if reviews are null
 if df_reviews["Username"].isnull().values.any() == True:
@@ -59,4 +64,3 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-df_reviews
