@@ -3,6 +3,7 @@ import numpy as np
 from numpy import array
 import re
 import nltk 
+from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -10,10 +11,14 @@ from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
 from sklearn.metrics import roc_auc_score
 
+stopwords1 = set(STOPWORDS)
+new_words = ['ref','referee']
+new_stopwords = stopwords.union(new_words)
+
+plot
+
 #custom stopwords, words that are not on nltk.stopwords. These words are not essential in reviews of gadgets.
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
-
-#countvec = CountVectorizer(custom_stopwords)
 
 nltk.download('stopwords')
 #Access and load the dataset record of reviews
@@ -32,7 +37,6 @@ if df_reviews["Reviews"].isnull().values.any() == True:
 
 df_reviews
 #df_reviews.head(20)
-
 
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
@@ -61,8 +65,6 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-
-
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
@@ -78,7 +80,7 @@ classifier.fit(x_train, y_train)
 
 roc_auc_score(y_test, classifier.predict_proba(x_test), multi_class='ovo')
 
-gadget_review_array = np.array(["bullshit"])
+gadget_review_array = np.array(["No reviews"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
-valuearray = classifier.predict(gadget_review_vector)
-valuearray
+valuearray1 = classifier.predict(gadget_review_vector)
+valuearray1
