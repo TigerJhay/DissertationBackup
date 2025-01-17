@@ -5,22 +5,23 @@ import re
 import nltk 
 from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
 from sklearn.metrics import roc_auc_score
 
-stopwords1 = set(STOPWORDS)
-new_words = ['ref','referee']
-new_stopwords = stopwords.union(new_words)
-
-plot
+# stopwords1 = set(STOPWORDS)
+# new_words = ['ref','referee']
+# new_stopwords = stopwords.union(new_words)
 
 #custom stopwords, words that are not on nltk.stopwords. These words are not essential in reviews of gadgets.
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
 nltk.download('stopwords')
+nltk.download('wordnet')
 #Access and load the dataset record of reviews
 df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
@@ -35,9 +36,9 @@ if df_reviews["Date"].isnull().values.any() == True:
 if df_reviews["Reviews"].isnull().values.any() == True:
     df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
-df_reviews
+df_reviews.drop(['Username','Date'],axis='columns',inplace=True)
 #df_reviews.head(20)
-
+# df_reviews
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
 
@@ -65,6 +66,11 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
+#Lemmatize, do I still need it???
+df_reviews["Reviews"][418] = lemmatizer.lemmatize(df_reviews["Reviews"][418])
+lemmatizer.lemmatize("sets")
+df_reviews
+
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
@@ -74,13 +80,12 @@ y_val = df_reviews['Rating']
 
 #fitting and transform
 x_val = vectorize.fit_transform(df_reviews['Reviews'])
-x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, random_state=50, test_size=.20)
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, random_state=42)
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train, y_train)
+df_reviews
+roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
-roc_auc_score(y_test, classifier.predict_proba(x_test), multi_class='ovo')
-
-gadget_review_array = np.array(["No reviews"])
+gadget_review_array = np.array(["This is a bad review"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
-valuearray1 = classifier.predict(gadget_review_vector)
-valuearray1
+classifier.predict(gadget_review_vector)
