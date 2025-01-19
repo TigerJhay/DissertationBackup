@@ -3,7 +3,7 @@ import numpy as np
 from numpy import array
 import re
 import nltk 
-from wordcloud import wordcloud, STOPWORDS
+#from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -22,6 +22,8 @@ custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
 nltk.download('stopwords')
 nltk.download('wordnet')
+nltk.download('punkt_tab')
+
 #Access and load the dataset record of reviews
 df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
@@ -37,24 +39,20 @@ if df_reviews["Reviews"].isnull().values.any() == True:
     df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
 df_reviews.drop(['Username','Date'],axis='columns',inplace=True)
-#df_reviews.head(20)
-# df_reviews
+
+#replace special tags inside sentiment
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
 
 #Removal of URL and Links inside of reviews column
 df_reviews = df_reviews.replace(r'http\S+', '', regex=True)
 df_reviews = df_reviews.replace(r"x000D", '', regex=True)
-#df_reviews["Reviews"][400]
 
 #html tag removal
 df_reviews = df_reviews.replace(r'<[^>]+>', '', regex= True)
-#tag_rem = re.compile(r'<[^>]+>')
-#df_reviews = tag_rem.sub('', df_reviews["Reviews"])
 
 #punctuation and character removal
 df_reviews = df_reviews.replace('[^a-zA-Z0-9]', ' ', regex=True)
-#testvalue = re.sub('[^a-zA-Z0-9]',' ', testvalue)
 
 #Single Character Removal
 df_reviews = df_reviews.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
@@ -66,10 +64,25 @@ df_reviews = df_reviews.replace(r" +", ' ', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
 df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-#Lemmatize, do I still need it???
-df_reviews["Reviews"][418] = lemmatizer.lemmatize(df_reviews["Reviews"][418])
-lemmatizer.lemmatize("sets")
+#Lemmatize dataframe, do I still need it???
+def lemmatize_review(review_text):
+    words = nltk.word_tokenize(review_text)
+    lemmatize_words = [lemmatizer.lemmatize(word) for word in words]
+    lemmatize_text = ' '.join(lemmatize_words)
+    return lemmatize_text
+df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
+
+
+#Rating of the sentiments will be converted into 3 classes
+# 0 - Negative Rating or review, These are with rating of 1 & 2
+# 1 - Positive Rating or review, These are with rating of 4 & 5
+# 3 - Neutral Rating or review, These are with rating of 3
+df_reviews["Rating"] = df_reviews["Rating"].astype(str)
+df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
+df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
+
 df_reviews
+
 
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
