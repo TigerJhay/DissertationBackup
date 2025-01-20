@@ -25,7 +25,8 @@ nltk.download('wordnet')
 nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
-df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
+#df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
+df_reviews = pd.read_csv("./templates/TestData_10_rows_only.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -93,10 +94,10 @@ y_val = df_reviews['Rating']
 
 #fitting and transform
 x_val = vectorize.fit_transform(df_reviews['Reviews'])
-x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+x_train
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train, y_train)
-df_reviews
 roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
 gadget_review_array = np.array(["This is a bad review"])
