@@ -83,23 +83,30 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
 
 df_reviews
-
-
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
-vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+# vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+# y_val = df_reviews['Rating']
+# x_val = vectorize.fit_transform(df_reviews['Reviews'])
+# x_val
+# x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+# x_train
+# classifier = naive_bayes.MultinomialNB()
+# classifier.fit(x_train, y_train)
+# roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
+vectorize = CountVectorizer()
 y_val = df_reviews['Rating']
-
-#fitting and transform
-x_val = vectorize.fit_transform(df_reviews['Reviews'])
+x_val = df_reviews['Reviews']
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
-x_train
-classifier = naive_bayes.MultinomialNB()
-classifier.fit(x_train, y_train)
-roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
-gadget_review_array = np.array(["This is a bad review"])
+x_train_count = vectorize.fit_transform(x_train.values)
+#x_train_count.toarray()[:3]
+classifier = naive_bayes.MultinomialNB()
+classifier.fit(x_train_count, y_train)
+#roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
+
+gadget_review_array = np.array(["Capacity are disappointing"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
 classifier.predict(gadget_review_vector)

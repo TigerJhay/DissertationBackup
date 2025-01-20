@@ -33,3 +33,21 @@ def preprocess_cleaning(textcomment):
     testvalue = stopword_pattern.sub('', testvalue)
     print (testvalue)
     return testvalue
+
+
+
+
+
+
+
+#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+
+vectorize = CountVectorizer()
+x_val = vectorize.fit_transform(df_reviews['Reviews'])
+vectorize.get_feature_names_out()
+x_val
+y_val = df_reviews['Rating']
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+x_train_count = vectorize.fit_transform(x_train)
+classifier = naive_bayes.MultinomialNB()
+classifier.fit(x_train, y_train)
