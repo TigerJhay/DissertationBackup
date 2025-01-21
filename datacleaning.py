@@ -86,7 +86,7 @@ df_reviews
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
-# vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
 # y_val = df_reviews['Rating']
 # x_val = vectorize.fit_transform(df_reviews['Reviews'])
 # x_val
