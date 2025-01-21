@@ -86,7 +86,7 @@ df_reviews
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
-#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii', stop_words=stopwords.words('english'))
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
 # y_val = df_reviews['Rating']
 # x_val = vectorize.fit_transform(df_reviews['Reviews'])
 # x_val
@@ -96,7 +96,7 @@ df_reviews
 # classifier.fit(x_train, y_train)
 # roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
-vectorize = CountVectorizer()
+#vectorize = CountVectorizer()
 y_val = df_reviews['Rating']
 x_val = df_reviews['Reviews']
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
@@ -107,6 +107,6 @@ classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train_count, y_train)
 #roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
 
-gadget_review_array = np.array(["Capacity are disappointing"])
+gadget_review_array = np.array(["Capacity are good"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
 classifier.predict(gadget_review_vector)
