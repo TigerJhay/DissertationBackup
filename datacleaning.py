@@ -3,6 +3,9 @@ import numpy as np
 from numpy import array
 import re
 import nltk 
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
 #from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -12,6 +15,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
 
+import keras
+import tensorflow
+import matplotlib
+
+from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
+from tensorflow.keras.models import Sequential
 
 
 # stopwords1 = set(STOPWORDS)
@@ -40,9 +49,10 @@ if df_reviews["Date"].isnull().values.any() == True:
 if df_reviews["Reviews"].isnull().values.any() == True:
     df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
+#Remove Column Username since this column is unnecessary
 df_reviews.drop(['Username'],axis='columns',inplace=True)
 
-#replace special tags inside sentiment
+#Replace special tags inside sentiment
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
 
@@ -50,10 +60,10 @@ df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
 df_reviews = df_reviews.replace(r'http\S+', '', regex=True)
 df_reviews = df_reviews.replace(r"x000D", '', regex=True)
 
-#html tag removal
+#HTML tag removal
 df_reviews = df_reviews.replace(r'<[^>]+>', '', regex= True)
 
-#punctuation and character removal
+#Punctuation and character removal
 df_reviews = df_reviews.replace('[^a-zA-Z0-9]', ' ', regex=True)
 
 #Single Character Removal
@@ -81,6 +91,21 @@ df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
+
+df_train, df_test = train_test_split(df_reviews, test_size=.2)
+df_train['Rating'].value_counts()
+df_test['Rating'].value_counts()
+
+from gensim.models import word2vec
+
+df_reviews['Reviews'] = df_reviews['Reviews'].apply(nltk.word_tokenize)
+
+df_reviews
+
+
+df = pd.DataFrame({'sentences': ['This is a very good site. I will recommend it to others.', 'Can you please give me a call at 9983938428. have issues with the listings.', 'good work! keep it up']})
+df['tokenized_sents'] = df.apply(lambda row: nltk.word_tokenize(row['sentences']), axis=1)
+
 
 #Vectorize process
 vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
