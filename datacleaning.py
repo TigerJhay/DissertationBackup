@@ -7,11 +7,12 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
-from sklearn.feature_extraction.text import CountVectorizer
+#from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
-from sklearn.metrics import roc_auc_score
+
+
 
 # stopwords1 = set(STOPWORDS)
 # new_words = ['ref','referee']
@@ -39,7 +40,7 @@ if df_reviews["Date"].isnull().values.any() == True:
 if df_reviews["Reviews"].isnull().values.any() == True:
     df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
-df_reviews.drop(['Username','Date'],axis='columns',inplace=True)
+df_reviews.drop(['Username'],axis='columns',inplace=True)
 
 #replace special tags inside sentiment
 df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
@@ -73,7 +74,6 @@ def lemmatize_review(review_text):
     return lemmatize_text
 df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 
-
 #Rating of the sentiments will be converted into 3 classes
 # 0 - Negative Rating or review, These are with rating of 1 & 2
 # 1 - Positive Rating or review, These are with rating of 4 & 5
@@ -82,27 +82,23 @@ df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
 
-df_reviews
+#Vectorize process
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
+#vectorize = CountVectorizer()
+
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
 #----------------------------------------------------------
-vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
-# y_val = df_reviews['Rating']
-# x_val = vectorize.fit_transform(df_reviews['Reviews'])
-# x_val
-# x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
-# x_train
-# classifier = naive_bayes.MultinomialNB()
-# classifier.fit(x_train, y_train)
-# roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
-
-#vectorize = CountVectorizer()
 y_val = df_reviews['Rating']
 x_val = df_reviews['Reviews']
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
-
 x_train_count = vectorize.fit_transform(x_train.values)
-#x_train_count.toarray()[:3]
+x_train_count.toarray()
+
+#dfxls = x_train_count.toarray()[:2]
+#dfxls = pd.DataFrame(x_train_count.toarray())
+#dfxls.to_excel("x_train.xlsx")
+
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train_count, y_train)
 #roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
