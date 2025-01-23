@@ -3,22 +3,21 @@ import numpy as np
 from numpy import array
 import re
 import nltk 
-import matplotlib.pyplot as plt
-import tensorflow as tf
 
 #from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
 lemmatizer = WordNetLemmatizer()
 #from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
 
-import keras
-import tensorflow
+#import keras
+#import tensorflow as tf
+import matplotlib.pyplot as plt
 import matplotlib
-
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 from tensorflow.keras.models import Sequential
 
@@ -92,16 +91,26 @@ df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
 
+df_reviews["Reviews"] = df_reviews["Reviews"].apply(word_tokenize)
+
 df_train, df_test = train_test_split(df_reviews, test_size=.2)
 df_train['Rating'].value_counts()
 df_test['Rating'].value_counts()
 
-from gensim.models import word2vec
+from gensim.models import Word2Vec
+
+Embedding_size = 50
+
+all_reviews = df_train['Reviews'].tolist()
+all_reviews.extend(df_test['Reviews'].tolist())
+
+wordvector_model = Word2Vec(all_reviews, vector_size=50)
+wordvector_model.wv['phone']
+wordvector_model.wv.most_similar('phone', topn=3)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].apply(nltk.word_tokenize)
 
 df_reviews
-
 
 df = pd.DataFrame({'sentences': ['This is a very good site. I will recommend it to others.', 'Can you please give me a call at 9983938428. have issues with the listings.', 'good work! keep it up']})
 df['tokenized_sents'] = df.apply(lambda row: nltk.word_tokenize(row['sentences']), axis=1)
