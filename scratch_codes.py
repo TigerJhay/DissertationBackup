@@ -51,3 +51,35 @@ x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2,
 x_train_count = vectorize.fit_transform(x_train)
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train, y_train)
+
+
+
+#Partial Code for naive Bayes
+
+df = pd.DataFrame({'sentences': ['This is a very good site. I will recommend it to others.', 'Can you please give me a call at 9983938428. have issues with the listings.', 'good work! keep it up']})
+df['tokenized_sents'] = df.apply(lambda row: nltk.word_tokenize(row['sentences']), axis=1)
+
+#Vectorize process
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
+#vectorize = CountVectorizer()
+
+#----------------------------------------------------------
+#This portion is part of Naive Bayes, Multinomial Algorithm
+#----------------------------------------------------------
+y_val = df_reviews['Rating']
+x_val = df_reviews['Reviews']
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+x_train_count = vectorize.fit_transform(x_train.values)
+x_train_count.toarray()
+
+#dfxls = x_train_count.toarray()[:2]
+#dfxls = pd.DataFrame(x_train_count.toarray())
+#dfxls.to_excel("x_train.xlsx")
+
+classifier = naive_bayes.MultinomialNB()
+classifier.fit(x_train_count, y_train)
+#roc_auc_score(y_test, classifier.predict_proba(x_test)[:,1],multi_class='ovo')
+
+gadget_review_array = np.array(["Capacity are good"])
+gadget_review_vector = vectorize.transform(gadget_review_array)
+classifier.predict(gadget_review_vector)
