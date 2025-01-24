@@ -35,7 +35,7 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
+df_reviews = pd.read_csv("./templates/TestData_100_rows_only.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -150,7 +150,7 @@ test_data_y = torch.FloatTensor([int(d) for d in df_test['Rating'].to_numpy()])
 train_data = TensorDataset(train_data_X, train_data_y)
 test_data = TensorDataset(test_data_X, test_data_y)
 
-batch_size = 200
+batch_size = 10
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
@@ -217,7 +217,7 @@ print(lstm_model)
 lr=0.001
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(lstm_model.parameters(), lr=lr)
-epochs = 15
+epochs = 200
 
 def accuracy(pred, label):
     pred = torch.round(pred.squeeze())
