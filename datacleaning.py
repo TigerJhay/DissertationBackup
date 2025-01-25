@@ -21,7 +21,6 @@ import matplotlib
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 from tensorflow.keras.models import Sequential
 
-
 # stopwords1 = set(STOPWORDS)
 # new_words = ['ref','referee']
 # new_stopwords = stopwords.union(new_words)
@@ -35,7 +34,7 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/TestData_100_rows_only.csv")
+df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -89,7 +88,7 @@ df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 # 3 - Neutral Rating or review, These are with rating of 3
 df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
-df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
+df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
 
 #Tokenize all words in the dataframe
@@ -104,6 +103,7 @@ from gensim.models import Word2Vec
 embedding_size = 50
 all_reviews = df_train['Reviews'].tolist()
 all_reviews.extend(df_test['Reviews'].tolist())
+#all_reviews
 
 wordvector_model = Word2Vec(all_reviews, vector_size=50)
 
@@ -114,7 +114,8 @@ wordvector_model.wv.most_similar('phone', topn=3)
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-SEQUENCE_LENGTH = 100 # cap each review to 100 words (tokens)
+# cap each review to 100 words (tokens)
+SEQUENCE_LENGTH = 100
 
 def convert_sequences_to_tensor(sequences, num_tokens_in_sequence, embedding_size):
     num_sequences = len(sequences)
@@ -142,15 +143,16 @@ train_data_y = torch.FloatTensor([int(d) for d in df_train['Rating'].to_numpy()]
 test_data_X = convert_sequences_to_tensor(df_test['Reviews'].to_numpy(), SEQUENCE_LENGTH, embedding_size)
 test_data_y = torch.FloatTensor([int(d) for d in df_test['Rating'].to_numpy()])
 
-# print("Example Sequence:")
-# print(train_data_X[0])
-# print("Example Label:")
-# print(train_data_y[0])
+print("Example Sequence:")
+print(train_data_X[0])
+print("Example Label:")
+print(train_data_y[0])
 
 train_data = TensorDataset(train_data_X, train_data_y)
 test_data = TensorDataset(test_data_X, test_data_y)
 
-batch_size = 10
+batch_size = 5
+#int(input("Enter value for batch size: "))
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
@@ -195,7 +197,7 @@ class LSTMModel(nn.Module):
     # dropout and fully connected layer
     lstm_out = self.dropout(lstm_out) # Only during training
     fc_out = self.fc(lstm_out)
-
+ 
     # apply the sigmoid function to maps the value to somewhere between 0 and 1
     sigmoid_out = self.sigmoid(fc_out)
 
@@ -217,7 +219,8 @@ print(lstm_model)
 lr=0.001
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(lstm_model.parameters(), lr=lr)
-epochs = 200
+epochs = 100
+#int(input("Enter value for epochs"))
 
 def accuracy(pred, label):
     pred = torch.round(pred.squeeze())
@@ -296,5 +299,4 @@ plt.plot(epoch_test_losses, label='Test Loss')
 plt.title("Loss")
 plt.legend()
 plt.grid()
-
 plt.show()
