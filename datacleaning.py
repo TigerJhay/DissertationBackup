@@ -219,7 +219,7 @@ print(lstm_model)
 lr=0.001
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(lstm_model.parameters(), lr=lr)
-epochs = 100
+epochs = 10
 #int(input("Enter value for epochs"))
 
 def accuracy(pred, label):
