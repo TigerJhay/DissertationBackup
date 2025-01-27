@@ -9,7 +9,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 lemmatizer = WordNetLemmatizer()
-#from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
@@ -91,12 +91,40 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
 
+#----------------------------------------------------------
+#This portion is part of Naive Bayes, Multinomial Algorithm
+#----------------------------------------------------------
+
+#Vectorize process
+#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
+vectorize = CountVectorizer()
+
+y_val = df_reviews['Rating']
+x_val = df_reviews['Reviews']
+x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+x_train_count = vectorize.fit_transform(x_train.values)
+x_train_count.toarray()
+
+classifier = naive_bayes.MultinomialNB()
+classifier.fit(x_train_count, y_train)
+
+#no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
+gadget_review_array = np.array(["Phone doesnt work","Capacity are bad", "Features are good"])
+gadget_review_vector = vectorize.transform(gadget_review_array)
+classifier.predict(gadget_review_vector)
+
+
+#---------------------------------------
+# This portion is for LSTM algorithm
+#---------------------------------------
+
 #Tokenize all words in the dataframe
 df_reviews["Reviews"] = df_reviews["Reviews"].apply(word_tokenize)
 
 df_train, df_test = train_test_split(df_reviews, test_size=.2)
 df_train['Rating'].value_counts()
 df_test['Rating'].value_counts()
+
 
 from gensim.models import Word2Vec
 
@@ -300,3 +328,9 @@ plt.title("Loss")
 plt.legend()
 plt.grid()
 plt.show()
+
+
+#----------------------------------------------
+# This portion is for Cluster K-Means Algorithm
+#----------------------------------------------
+

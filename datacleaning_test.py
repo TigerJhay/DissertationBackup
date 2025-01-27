@@ -74,3 +74,29 @@ y = np.array(list(map(lambda x: 1 if x=="positive" else 0, y)))
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 # The train set will be used to train our deep learning models 
 # while test set will be used to evaluate how well our model performs 
+
+
+
+import asyncio
+from googletrans import Translator
+async def main():
+  original_text = "Hola, ¿cómo estás?"
+  english_translation = await translate_text(original_text)
+  print(f"Original text: {original_text}")
+  print(f"Translated text: {english_translation}")
+
+# Run the asynchronous code
+asyncio.run(main()) 
+
+
+async def translate_text(text):
+  translator = Translator()
+  translation_coroutine = translator.translate(text, dest='en') 
+  translation = await translation_coroutine 
+  return translation.text
+
+translate_text("Pagkain")
+
+translater = Translator()
+translation = translater.translate("Masarap", dest="en")
+translation
