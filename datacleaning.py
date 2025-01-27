@@ -90,6 +90,9 @@ df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
+df_naivebayes = pd.DataFrame(df_reviews)
+df_lstm = pd.DataFrame(df_reviews)
+df_kmeans = pd.DataFrame(df_reviews)
 
 #----------------------------------------------------------
 #This portion is part of Naive Bayes, Multinomial Algorithm
@@ -99,8 +102,8 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True
 #vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
 vectorize = CountVectorizer()
 
-y_val = df_reviews['Rating']
-x_val = df_reviews['Reviews']
+y_val = df_naivebayes['Rating']
+x_val = df_naivebayes['Reviews']
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
 x_train_count = vectorize.fit_transform(x_train.values)
 x_train_count.toarray()
@@ -119,9 +122,9 @@ classifier.predict(gadget_review_vector)
 #---------------------------------------
 
 #Tokenize all words in the dataframe
-df_reviews["Reviews"] = df_reviews["Reviews"].apply(word_tokenize)
+df_lstm["Reviews"] = df_reviews["Reviews"].apply(word_tokenize)
 
-df_train, df_test = train_test_split(df_reviews, test_size=.2)
+df_train, df_test = train_test_split(df_lstm, test_size=.2)
 df_train['Rating'].value_counts()
 df_test['Rating'].value_counts()
 
@@ -334,3 +337,31 @@ plt.show()
 # This portion is for Cluster K-Means Algorithm
 #----------------------------------------------
 
+df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
+vectorize = TfidfVectorizer(stop_words='english')
+vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
+
+k_value = 10
+k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
+k_model.fit(vectorized_value)
+
+df_kmeans["clusters"] = k_model.labels_
+df_kmeans.head()
+
+
+cluster_groupby = df_kmeans.groupby("clusters")
+
+for cluster in cluster_groupby.groups:
+    f = open("cluster"+str(cluster)+".csv","w")
+    data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
+    f.write(data.to_csv(index_label="id"))
+    f.close()
+
+center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+terms = vectorize.get_feature_names_out()
+
+for ctr in range(k_value):
+    print ("Cluster %d: " % ctr)
+    for ctr2 in center_gravity[ctr, :10]:
+        print ("%s" % terms[ctr2])
+    print ("---------------------")
