@@ -20,19 +20,23 @@ nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt_tab')
 
+#googletrans==4.0.0-rc1
 from googletrans import Translator
-translater = Translator()
+trans_interpreter = Translator()
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews.head(20)
 
-df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+#translated_string = trans_interpreter.translate("maayos naman ang lagay ko", src="auto", dest="en").text
+df_reviews["Reviews"] =  df_reviews["Reviews"].apply(lambda x: trans_interpreter.translate(x, src="auto", dest="en").text)
 
-df_reviews["Reviews"] = df_reviews["Reviews"].astype(str)
 df_reviews["Translated_text"] = df_reviews["Reviews"].apply(translater.translate, src='auto', dest='en').apply(getattr,args=('text',))
-df_reviews
+
+
+df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+df_reviews["Reviews"] = df_reviews["Reviews"].astype(str)
 # Checking for missing values. Fill necessary and drop if reviews are null
 if df_reviews["Username"].isnull().values.any() == True:
     df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
@@ -97,13 +101,12 @@ df_reviews["clusters"] = k_model.labels_
 df_reviews.head()
 
 
-cluster_groupby = df_reviews.groupby("clusters")
-
-for cluster in cluster_groupby.groups:
-    f = open("cluster"+str(cluster)+".csv","w")
-    data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
-    f.write(data.to_csv(index_label="id"))
-    f.close()
+# cluster_groupby = df_reviews.groupby("clusters")
+# for cluster in cluster_groupby.groups:
+#     f = open("cluster" + str(cluster)+".csv","w")
+#     data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
+#     f.write(data.to_csv(index_label="id"))
+#     f.close()
 
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()

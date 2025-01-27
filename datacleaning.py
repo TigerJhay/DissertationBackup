@@ -13,6 +13,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
+from sklearn.cluster import KMeans
 
 #import keras
 #import tensorflow as tf
@@ -349,13 +350,12 @@ df_kmeans["clusters"] = k_model.labels_
 df_kmeans.head()
 
 
-cluster_groupby = df_kmeans.groupby("clusters")
-
-for cluster in cluster_groupby.groups:
-    f = open("cluster"+str(cluster)+".csv","w")
-    data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
-    f.write(data.to_csv(index_label="id"))
-    f.close()
+# cluster_groupby = df_kmeans.groupby("clusters")
+# for cluster in cluster_groupby.groups:
+#     f = open("cluster"+str(cluster)+".csv","w")
+#     data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
+#     f.write(data.to_csv(index_label="id"))
+#     f.close()
 
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()
