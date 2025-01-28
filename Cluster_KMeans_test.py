@@ -14,26 +14,24 @@ from sklearn.model_selection import train_test_split
 from sklearn import naive_bayes
 from sklearn.cluster import KMeans
 #from translate import Translator
-
+from googletrans import Translator
 
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt_tab')
-
-#googletrans==4.0.0-rc1
-from googletrans import Translator
-trans_interpreter = Translator()
-
+custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews.head(20)
+df_reviews = pd.read_csv("./templates/TestData_10_rows_only.csv")
+#df_reviews.head(20)
+
+trans_interpreter = Translator()
+df_reviews['Reviews'] = df_reviews.apply(lambda x: trans_interpreter.translate(x['Reviews'],src="auto",dest="en").text, axis=1)
+#df_reviews
 
 #translated_string = trans_interpreter.translate("maayos naman ang lagay ko", src="auto", dest="en").text
-df_reviews["Reviews"] =  df_reviews["Reviews"].apply(lambda x: trans_interpreter.translate(x, src="auto", dest="en").text)
-
-df_reviews["Translated_text"] = df_reviews["Reviews"].apply(translater.translate, src='auto', dest='en').apply(getattr,args=('text',))
-
+#df_reviews["Reviews"] =  df_reviews["Reviews"].apply(lambda x: trans_interpreter.translate(x, src="auto", dest="en").text)
+#df_reviews["Translated_text"] = df_reviews["Reviews"].apply(trans_interpreter.translate, src='auto', dest='en').text
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 df_reviews["Reviews"] = df_reviews["Reviews"].astype(str)

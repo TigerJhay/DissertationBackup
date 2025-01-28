@@ -83,3 +83,22 @@ classifier.fit(x_train_count, y_train)
 gadget_review_array = np.array(["Capacity are good"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
 classifier.predict(gadget_review_vector)
+
+
+
+
+#googletrans==4.0.0-rc1
+from googletrans import Translator
+trans_interpreter = Translator()
+
+df_test=pd.DataFrame({
+    'id':[1,2,3,4,5],
+    'name':['Kamusta','Pagkain ng mahirap','ang pangalan ko ay jherold','Ryan','Mary'],
+    'age':[20,25,15,10,30],
+    'income':[4000,7000,200,0,10000]
+})
+
+df_test['name'] = df_test.apply(lambda x: trans_interpreter.translate(x['name'],src="auto",dest="en").text, axis=1)
+
+#df_test['income']=df_test.apply(lambda x: x['income']+3,axis=1)
+df_test

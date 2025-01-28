@@ -365,3 +365,5 @@ for ctr in range(k_value):
     for ctr2 in center_gravity[ctr, :10]:
         print ("%s" % terms[ctr2])
     print ("---------------------")
+
+plt.scatter
