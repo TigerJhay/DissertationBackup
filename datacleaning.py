@@ -366,4 +366,7 @@ for ctr in range(k_value):
         print ("%s" % terms[ctr2])
     print ("---------------------")
 
-plt.scatter
+plt.scatter(df_kmeans['Reviews'], df_kmeans['clusters'])
+plt.xlabel('clusters')
+plt.ylabel('Reviews')
+plt.show()

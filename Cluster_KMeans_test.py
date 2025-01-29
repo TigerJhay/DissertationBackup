@@ -3,6 +3,9 @@ import numpy as np
 from numpy import array
 import re
 import nltk 
+import matplotlib.pyplot as plt
+import matplotlib
+
 
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -91,20 +94,13 @@ df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
 vectorize = TfidfVectorizer(stop_words='english')
 vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
 
+
 k_value = 10
 k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-k_model.fit(vectorized_value)
-
-df_reviews["clusters"] = k_model.labels_
-df_reviews.head()
-
-
-# cluster_groupby = df_reviews.groupby("clusters")
-# for cluster in cluster_groupby.groups:
-#     f = open("cluster" + str(cluster)+".csv","w")
-#     data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
-#     f.write(data.to_csv(index_label="id"))
-#     f.close()
+kmean_model = k_model.fit_transform(vectorized_value)
+kmean_model
+#df_reviews["clusters"] = k_model.labels_
+#df_reviews.head()
 
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()
@@ -114,3 +110,8 @@ for ctr in range(k_value):
     for ctr2 in center_gravity[ctr, :10]:
         print ("%s" % terms[ctr2])
     print ("---------------------")
+
+plt.scatter(k_model.cluster_centers_)
+#plt.xlabel(vectorized_value)
+#plt.ylabel(vectorized_value)
+plt.show()
