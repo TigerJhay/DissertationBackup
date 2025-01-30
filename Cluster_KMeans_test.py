@@ -89,11 +89,10 @@ df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
-
 df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
 vectorize = TfidfVectorizer(stop_words='english')
-vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
 
+vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
 
 k_value = 10
 k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
@@ -105,11 +104,11 @@ kmean_model
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()
 
-for ctr in range(k_value):
-    print ("Cluster %d: " % ctr)
-    for ctr2 in center_gravity[ctr, :10]:
-        print ("%s" % terms[ctr2])
-    print ("---------------------")
+# for ctr in range(k_value):
+#     print ("Cluster %d: " % ctr)
+#     for ctr2 in center_gravity[ctr, :10]:
+#         print ("%s" % terms[ctr2])
+#     print ("---------------------")
 
 plt.scatter(k_model.cluster_centers_)
 #plt.xlabel(vectorized_value)
