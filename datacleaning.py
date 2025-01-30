@@ -35,7 +35,7 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Main_Dataset.csv", encoding="ISO-8859-1")
+df_reviews = pd.read_csv("./templates/Main_Dataset_1000.csv", encoding="ISO-8859-1")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -113,7 +113,7 @@ classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train_count, y_train)
 
 #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
-gadget_review_array = np.array(["Phone doesnt work","Capacity are bad", "Features are good"])
+gadget_review_array = np.array(["Phone doesnt work","Capacity are not good", "Features are good"])
 gadget_review_vector = vectorize.transform(gadget_review_array)
 classifier.predict(gadget_review_vector)
 
@@ -121,7 +121,7 @@ classifier.predict(gadget_review_vector)
 #---------------------------------------
 # This portion is for LSTM algorithm
 #---------------------------------------
-embedding_size = 50
+embedding_size =50
 # cap each review to 100 words (tokens)
 
 SEQUENCE_LENGTH = 50
@@ -153,8 +153,6 @@ wordvector_model.wv.most_similar('phone', topn=3)
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-
-
 
 def convert_sequences_to_tensor(sequences, num_tokens_in_sequence, embedding_size):
     num_sequences = len(sequences)
@@ -338,3 +336,40 @@ plt.legend()
 plt.grid()
 plt.show()
 
+
+#----------------------------------------------
+# This portion is for Cluster K-Means Algorithm
+#----------------------------------------------
+
+df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
+vectorize = TfidfVectorizer(stop_words='english')
+vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
+
+k_value = 10
+k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
+k_model.fit(vectorized_value)
+
+df_kmeans["clusters"] = k_model.labels_
+df_kmeans.head()
+
+
+# cluster_groupby = df_kmeans.groupby("clusters")
+# for cluster in cluster_groupby.groups:
+#     f = open("cluster"+str(cluster)+".csv","w")
+#     data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
+#     f.write(data.to_csv(index_label="id"))
+#     f.close()
+
+center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+terms = vectorize.get_feature_names_out()
+
+for ctr in range(k_value):
+    print ("Cluster %d: " % ctr)
+    for ctr2 in center_gravity[ctr, :10]:
+        print ("%s" % terms[ctr2])
+    print ("---------------------")
+
+plt.scatter(df_kmeans['Reviews'], df_kmeans['clusters'])
+#plt.xlabel('clusters')
+#plt.ylabel('Reviews')
+plt.show()

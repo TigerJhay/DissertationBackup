@@ -25,7 +25,7 @@ nltk.download('punkt_tab')
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/TestData_10_rows_only.csv")
+df_reviews = pd.read_csv("./templates/Main_DataSet_1000.csv", encoding="ISO-8859-1")
 df_reviews.head(20)
 
 trans_interpreter = Translator()
