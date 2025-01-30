@@ -35,7 +35,7 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
+df_reviews = pd.read_csv("./templates/Main_Dataset.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
