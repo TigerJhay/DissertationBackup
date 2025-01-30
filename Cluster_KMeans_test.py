@@ -26,7 +26,7 @@ custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews = pd.read_csv("./templates/TestData_10_rows_only.csv")
-#df_reviews.head(20)
+df_reviews.head(20)
 
 trans_interpreter = Translator()
 df_reviews['Reviews'] = df_reviews.apply(lambda x: trans_interpreter.translate(x['Reviews'],src="auto",dest="en").text, axis=1)
