@@ -35,7 +35,7 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Main_Dataset.csv")
+df_reviews = pd.read_csv("./templates/Main_Dataset.csv", encoding="ISO-8859-1")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -121,6 +121,14 @@ classifier.predict(gadget_review_vector)
 #---------------------------------------
 # This portion is for LSTM algorithm
 #---------------------------------------
+embedding_size = 50
+# cap each review to 100 words (tokens)
+
+SEQUENCE_LENGTH = 50
+
+batch_size = 100
+#int(input("Enter value for batch size: "))
+epochs = 10
 
 #Tokenize all words in the dataframe
 df_lstm["Reviews"] = df_reviews["Reviews"].apply(word_tokenize)
@@ -132,7 +140,7 @@ df_test['Rating'].value_counts()
 
 from gensim.models import Word2Vec
 
-embedding_size = 50
+
 all_reviews = df_train['Reviews'].tolist()
 all_reviews.extend(df_test['Reviews'].tolist())
 #all_reviews
@@ -146,8 +154,7 @@ wordvector_model.wv.most_similar('phone', topn=3)
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-# cap each review to 100 words (tokens)
-SEQUENCE_LENGTH = 100
+
 
 def convert_sequences_to_tensor(sequences, num_tokens_in_sequence, embedding_size):
     num_sequences = len(sequences)
@@ -183,8 +190,6 @@ print(train_data_y[0])
 train_data = TensorDataset(train_data_X, train_data_y)
 test_data = TensorDataset(test_data_X, test_data_y)
 
-batch_size = 5
-#int(input("Enter value for batch size: "))
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
@@ -251,7 +256,7 @@ print(lstm_model)
 lr=0.001
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(lstm_model.parameters(), lr=lr)
-epochs = 10
+
 #int(input("Enter value for epochs"))
 
 def accuracy(pred, label):
@@ -333,40 +338,3 @@ plt.legend()
 plt.grid()
 plt.show()
 
-
-#----------------------------------------------
-# This portion is for Cluster K-Means Algorithm
-#----------------------------------------------
-
-df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
-vectorize = TfidfVectorizer(stop_words='english')
-vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
-
-k_value = 10
-k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-k_model.fit(vectorized_value)
-
-df_kmeans["clusters"] = k_model.labels_
-df_kmeans.head()
-
-
-# cluster_groupby = df_kmeans.groupby("clusters")
-# for cluster in cluster_groupby.groups:
-#     f = open("cluster"+str(cluster)+".csv","w")
-#     data = cluster_groupby.get_group(cluster)[["Rating", "Reviews"]]
-#     f.write(data.to_csv(index_label="id"))
-#     f.close()
-
-center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
-terms = vectorize.get_feature_names_out()
-
-for ctr in range(k_value):
-    print ("Cluster %d: " % ctr)
-    for ctr2 in center_gravity[ctr, :10]:
-        print ("%s" % terms[ctr2])
-    print ("---------------------")
-
-plt.scatter(df_kmeans['Reviews'], df_kmeans['clusters'])
-plt.xlabel('clusters')
-plt.ylabel('Reviews')
-plt.show()
