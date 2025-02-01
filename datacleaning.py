@@ -35,7 +35,8 @@ nltk.download('punkt_tab')
 
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Main_Dataset_1000.csv", encoding="ISO-8859-1")
+#df_reviews = pd.read_csv("./templates/Main_DataSet_v2.csv")
+df_reviews = pd.read_csv("./templates/Main_Dataset_v1.csv", encoding="ISO-8859-1")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -90,6 +91,7 @@ df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 df_reviews["Rating"] = df_reviews["Rating"].astype(str)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
+#drop yung 3 rating
 
 df_naivebayes = pd.DataFrame(df_reviews)
 df_lstm = pd.DataFrame(df_reviews)
@@ -100,7 +102,7 @@ df_kmeans = pd.DataFrame(df_reviews)
 #----------------------------------------------------------
 
 #Vectorize process
-#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii')
+#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='ascii'1)
 vectorize = CountVectorizer()
 
 y_val = df_naivebayes['Rating']
@@ -121,7 +123,7 @@ classifier.predict(gadget_review_vector)
 #---------------------------------------
 # This portion is for LSTM algorithm
 #---------------------------------------
-embedding_size =50
+embedding_size = 50
 # cap each review to 100 words (tokens)
 
 SEQUENCE_LENGTH = 50
@@ -336,7 +338,6 @@ plt.legend()
 plt.grid()
 plt.show()
 
-
 #----------------------------------------------
 # This portion is for Cluster K-Means Algorithm
 #----------------------------------------------
@@ -351,7 +352,6 @@ k_model.fit(vectorized_value)
 
 df_kmeans["clusters"] = k_model.labels_
 df_kmeans.head()
-
 
 # cluster_groupby = df_kmeans.groupby("clusters")
 # for cluster in cluster_groupby.groups:
@@ -370,6 +370,4 @@ for ctr in range(k_value):
     print ("---------------------")
 
 plt.scatter(df_kmeans['Reviews'], df_kmeans['clusters'])
-#plt.xlabel('clusters')
-#plt.ylabel('Reviews')
 plt.show()
