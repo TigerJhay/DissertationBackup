@@ -31,12 +31,15 @@
       </script>
 </head>
 <body>
-  <form name="indexform" method="POST" action="generateResult">
+  <!-- generateResult to testnaivealgo -->
+  <form name="indexform" method="POST" action="testnaivealgo">
+
     <div class="container-xl main_background">  
         <div class="fw-bold fs-4">This is main header text</div>
         
         <div class="fw-bold fs-5">Input Item to search         
           <div class="input-group mb-3">
+
           <!-- Input textbox for Search -->
             <span class="input-group-text" sid="basic-addon1">Search Gadget</span>
             <input type="text" class="form-control " placeholder="Gadget to search" name="txtsearch">
@@ -76,9 +79,15 @@
                   {% for message in get_flashed_messages() %}
                   <div class="fs-6">Generated Result: {{message}}</div>
                   {% endfor %}
+                  <div>
+                    {% block content %}
+                      <image src="{{ url_for('static', filename='images/lstm_train_acc.png')}}">
+                      <image src="{{ url_for('static', filename='images/lstm_test_acc.png')}}">
+                    {% endblock%}
+                  </div>
 
                   <!-- Test record -->
-                  <div id="stringresult" class="fs-6">
+                  <div id="stringresult" class="fs-6">Testing div
                     {% with errors = get_flashed_messages(category_filter=["**"]) %}
                     {% if errors %}
                     <div class="alert-message block-message error">

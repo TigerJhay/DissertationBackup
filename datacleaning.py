@@ -2,13 +2,11 @@ import pandas as pd
 import numpy as np
 from numpy import array
 import re
-import nltk 
-
-#from wordcloud import wordcloud, STOPWORDS
+import nltk #from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-lemmatizer = WordNetLemmatizer()
+
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
@@ -20,8 +18,7 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
-from tensorflow.keras.models import Sequential
-
+lemmatizer = WordNetLemmatizer()
 # stopwords1 = set(STOPWORDS)
 # new_words = ['ref','referee']
 # new_stopwords = stopwords.union(new_words)
@@ -36,7 +33,7 @@ nltk.download('punkt_tab')
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 #df_reviews = pd.read_csv("./templates/Main_DataSet_v2.csv")
-df_reviews = pd.read_csv("./templates/Main_Dataset_v1.csv", encoding="ISO-8859-1")
+df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset_utf8.csv")
 df_reviews.head(20)
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
@@ -113,12 +110,16 @@ x_train_count.toarray()
 
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train_count, y_train)
-
+gadget_search = "Phone doesnt work"
 #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
-gadget_review_array = np.array(["Phone doesnt work","Capacity are not good", "Features are good"])
+gadget_review_array = np.array([gadget_search])
 gadget_review_vector = vectorize.transform(gadget_review_array)
-classifier.predict(gadget_review_vector)
-
+nb_result = classifier.predict(gadget_review_vector)
+for result in nb_result:
+  if result==0:
+    print ("The sentiment is positive")
+  else:
+    print ("The sentiment is negative")
 
 #---------------------------------------
 # This portion is for LSTM algorithm
