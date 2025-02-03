@@ -39,31 +39,30 @@ def home():
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():
      gadget_search = str(request.form['txtsearch'])
-
      custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
-
      nltk.download('stopwords')
      nltk.download('wordnet')
      nltk.download('punkt_tab')
 
-     df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset_utf8.csv", encoding="ISO-8859-1")
+     df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
+     #df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8_noUsrName.csv", encoding="ISO-8859-1")
      df_reviews.head(20)
+   
+     #Remove Column Username since this column is unnecessary
+     #df_reviews.drop(["Username"],axis='columns',inplace=True)
+     df_reviews
      
-     df_reviews = df_reviews[df_reviews["Reviews"].map(lambda x: x.isascii())]
-     
-     df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+     df_reviews["Reviews"] = df_reviews["Reviews"].str.lower()
 
      # Checking for missing values. Fill necessary and drop if reviews are null
      if df_reviews["Username"].isnull().values.any() == True:
           df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
+     df_reviews["Date"]
      if df_reviews["Date"].isnull().values.any() == True:
           df_reviews["Date"] = df_reviews["Date"].fillna("1/1/11")
      if df_reviews["Reviews"].isnull().values.any() == True:
           df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-
-     #Remove Column Username since this column is unnecessary
-     df_reviews.drop(['Username'],axis='columns',inplace=True)
-
+    
      #Replace special tags inside sentiment
      df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\n",' ')
      df_reviews["Reviews"] = df_reviews["Reviews"].str.replace("\r",' ')
@@ -88,6 +87,7 @@ def naivebayes_algo():
      df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
      df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
+
      def lemmatize_review(review_text):
           words = nltk.word_tokenize(review_text)
           lemmatize_words = [lemmatizer.lemmatize(word) for word in words]
@@ -95,14 +95,33 @@ def naivebayes_algo():
           return lemmatize_text
      df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 
+# Last step in data cleaning! All non-character or whitespaces will be converted to None(NULL)
+     # and dropped from the dataframe
+     df_reviews["Reviews"].replace('', None, inplace=True)
+     
+     if df_reviews["Reviews"].isnull().values.any():
+          df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+
+     
+     #df_reviews["Reviews"].dropna(inplace=True)
+    
+
      #Rating of the sentiments will be converted into 3 classes
      # 0 - Negative Rating or review, These are with rating of 1 & 2
      # 1 - Positive Rating or review, These are with rating of 4 & 5
-     # 3 - Neutral Rating or review, These are with rating of 3
      df_reviews["Rating"] = df_reviews["Rating"].astype(str)
      df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
-     df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
-     #drop yung 3 rating
+     df_reviews["Rating"] = df_reviews["Rating"].str.replace('[4-5]', '1', regex=True)
+     # 3 - Neutral Rating or review, These are with rating of 3
+     # This rating will be drop to be dataframe since these are all neither positive or negative
+     df_reviews = df_reviews.drop(df_reviews[df_reviews["Rating"]=='3'].index, inplace=False)
+
+     df_reviews.head(20)
+     df_reviews.count
+     df_reviews.iloc[2210:2327]
+     df_reviews.iloc[2270:2285]
+     
+     df_reviews.to_excel("clean_data.xlsx",sheet_name="Cleansheet")
 
      df_naivebayes = pd.DataFrame(df_reviews)
      df_lstm = pd.DataFrame(df_reviews)
@@ -164,8 +183,8 @@ def naivebayes_algo():
      wordvector_model = Word2Vec(all_reviews, vector_size=50)
 
      #wv['_____'] the value inside wv is the value needed for prediction
-     wordvector_model.wv['apple']
-     wordvector_model.wv.most_similar('apple', topn=3)
+     wordvector_model.wv[gadget_search]
+     wordvector_model.wv.most_similar(gadget_search, topn=3)
 
      import torch
      from torch.utils.data import DataLoader, TensorDataset
