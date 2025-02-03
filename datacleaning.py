@@ -33,18 +33,22 @@ nltk.download('punkt_tab')
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 #df_reviews = pd.read_csv("./templates/Main_DataSet_v2.csv")
-df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset_utf8.csv")
+#df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8.csv")
+df_reviews = pd.read_csv("./templates/Datasets/testregex.csv")
 df_reviews.head(20)
 
-df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
+df_reviews = df_reviews[df_reviews["Reviews"].map(lambda x: x.isascii())]
 
+df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 # Checking for missing values. Fill necessary and drop if reviews are null
 if df_reviews["Username"].isnull().values.any() == True:
-    df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
+  df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
 if df_reviews["Date"].isnull().values.any() == True:
-    df_reviews["Date"] = df_reviews["Date"].fillna("1/1/11")
+  df_reviews["Date"] = df_reviews["Date"].fillna("1/1/11")
 if df_reviews["Reviews"].isnull().values.any() == True:
-    df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+  df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+
+
 
 #Remove Column Username since this column is unnecessary
 df_reviews.drop(['Username'],axis='columns',inplace=True)
@@ -151,8 +155,8 @@ all_reviews.extend(df_test['Reviews'].tolist())
 wordvector_model = Word2Vec(all_reviews, vector_size=50)
 
 #wv['_____'] the value inside wv is the value needed for prediction
-wordvector_model.wv['phone']
-wordvector_model.wv.most_similar('phone', topn=3)
+wordvector_model.wv['apple']
+wordvector_model.wv.most_similar('apple', topn=3)
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -333,7 +337,9 @@ plt.grid()
 
 plt.subplot(1, 2, 2)
 plt.plot(epoch_train_losses, label='Train Loss')
+plt.savefig("static\HTML\images\LSTM_train_acc.png")
 plt.plot(epoch_test_losses, label='Test Loss')
+plt.savefig("static\HTML\images\LSTM_test_acc.png")
 plt.title("Loss")
 plt.legend()
 plt.grid()
