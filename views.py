@@ -48,7 +48,9 @@ def naivebayes_algo():
 
      df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset_utf8.csv", encoding="ISO-8859-1")
      df_reviews.head(20)
-
+     
+     df_reviews = df_reviews[df_reviews["Reviews"].map(lambda x: x.isascii())]
+     
      df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 
      # Checking for missing values. Fill necessary and drop if reviews are null
