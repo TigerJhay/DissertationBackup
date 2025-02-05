@@ -34,10 +34,12 @@ nltk.download('punkt_tab')
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 #df_reviews = pd.read_csv("./templates/Main_DataSet_v2.csv")
 #df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8.csv")
-df_reviews = pd.read_csv("./templates/Datasets/testregex.csv")
+df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet.csv", encoding="Latin_1")
 df_reviews.head(20)
 
-df_reviews = df_reviews[df_reviews["Reviews"].map(lambda x: x.isascii())]
+distinct_model = df_reviews["Model"].unique()
+
+#df_reviews = df_reviews[df_reviews["Reviews"].map(lambda x: x.isascii())]
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 # Checking for missing values. Fill necessary and drop if reviews are null

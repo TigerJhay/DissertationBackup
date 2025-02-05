@@ -29,7 +29,13 @@ views = Blueprint(__name__, "views")
 
 @views.route("/")
 def home():
-     return render_template("index.html")
+     df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
+     distinct_value = df_reviews["Model"].unique()
+     html_gadgetlist = ""
+     for values in distinct_value:
+          html_gadgetlist += f"<li><a class='dropdown-item' href='#'>{values}</a></li>"
+     html_gadgetlist
+     return render_template("index.html", listvalue = html_gadgetlist)
      #return render_template("testscript.html")
 
 # @views.route("/generateResult", methods=["GET","POST"])
@@ -39,6 +45,15 @@ def home():
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():
      gadget_search = str(request.form['txtsearch'])
+     
+     
+     # searchstring = str(request.form['txtsearch'])
+     # genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+     # model = genai.GenerativeModel("gemini-1.5-flash")
+     # response = model.generate_content(searchstring)    
+     # flash("Generated AI response: " + str(response.text))
+
+
      custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
      nltk.download('stopwords')
      nltk.download('wordnet')
@@ -102,7 +117,6 @@ def naivebayes_algo():
      if df_reviews["Reviews"].isnull().values.any():
           df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
-     
      #df_reviews["Reviews"].dropna(inplace=True)
     
 
@@ -116,11 +130,8 @@ def naivebayes_algo():
      # This rating will be drop to be dataframe since these are all neither positive or negative
      df_reviews = df_reviews.drop(df_reviews[df_reviews["Rating"]=='3'].index, inplace=False)
 
-     df_reviews.head(20)
-     df_reviews.count
-     df_reviews.iloc[2210:2327]
-     df_reviews.iloc[2270:2285]
-     
+     distinct_model = df_reviews["Model"].unique()
+
      df_reviews.to_excel("clean_data.xlsx",sheet_name="Cleansheet")
 
      df_naivebayes = pd.DataFrame(df_reviews)
@@ -153,7 +164,7 @@ def naivebayes_algo():
           else:
                value = "The sentiment is positive"
      
-     flash (value)
+     flash(value)
      
      #---------------------------------------
      # This portion is for LSTM algorithm
@@ -374,11 +385,6 @@ def naivebayes_algo():
      #plt.show()
 
      return render_template("index.html")
-
-
-
-
-
 
 # ---------------------------------------------------------------------------
 # Next VIEW for AI
