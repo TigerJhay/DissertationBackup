@@ -42,14 +42,12 @@ def naivebayes_algo():
      airesult = str(model.generate_content(gadget_search).text)    
      # flash("Generated AI response: " + str(response.text))
 
-
      custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
      nltk.download('stopwords')
      nltk.download('wordnet')
      nltk.download('punkt_tab')
 
      df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
-     #df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8_noUsrName.csv", encoding="ISO-8859-1")
      df_reviews.head(20)
    
      #Remove Column Username since this column is unnecessary
@@ -91,7 +89,6 @@ def naivebayes_algo():
      df_reviews = df_reviews.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
      df_reviews = df_reviews.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-
      def lemmatize_review(review_text):
           words = nltk.word_tokenize(review_text)
           lemmatize_words = [lemmatizer.lemmatize(word) for word in words]
@@ -105,9 +102,6 @@ def naivebayes_algo():
      
      if df_reviews["Reviews"].isnull().values.any():
           df_reviews = df_reviews.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-
-     #df_reviews["Reviews"].dropna(inplace=True)
-    
 
      #Rating of the sentiments will be converted into 3 classes
      # 0 - Negative Rating or review, These are with rating of 1 & 2

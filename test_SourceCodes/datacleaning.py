@@ -113,7 +113,7 @@ x_val = df_naivebayes['Reviews']
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
 x_train_count = vectorize.fit_transform(x_train.values)
 x_train_count.toarray()
-
+ 
 classifier = naive_bayes.MultinomialNB()
 classifier.fit(x_train_count, y_train)
 gadget_search = "Phone doesnt work"
