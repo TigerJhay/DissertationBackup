@@ -102,3 +102,20 @@ df_test['name'] = df_test.apply(lambda x: trans_interpreter.translate(x['name'],
 
 #df_test['income']=df_test.apply(lambda x: x['income']+3,axis=1)
 df_test
+
+
+
+@views.route("/search_gadget_description", methods=["GET","POST"])
+def fetchAIdescription():
+     searchstring = str(request.form['txtSearchValue'])
+     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+     model = genai.GenerativeModel("gemini-1.5-flash")
+     response = model.generate_content(searchstring)    
+     flash("Generated AI response: " + str(response.text))
+     return render_template("testscript.html")
+
+@views.route("/profile")
+def profile():
+    args = request.args
+    name = args.get('name')
+    return render_template("index.html", name=name)

@@ -6,7 +6,6 @@ import nltk
 import matplotlib.pyplot as plt
 import matplotlib
 
-
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -25,7 +24,7 @@ nltk.download('punkt_tab')
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 #Access and load the dataset record of reviews
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
-df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8.csv", encoding="ISO-8859-1")
+df_reviews = pd.read_csv("../templates/Datasets/Main_Dataset.csv", encoding="latin_1")
 df_reviews.head(20)
 distinct_value = df_reviews["Username"].unique()
 
@@ -105,13 +104,13 @@ kmean_model
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()
 
-# for ctr in range(k_value):
-#     print ("Cluster %d: " % ctr)
-#     for ctr2 in center_gravity[ctr, :10]:
-#         print ("%s" % terms[ctr2])
-#     print ("---------------------")
+for ctr in range(k_value):
+    print ("Cluster %d: " % ctr)
+    for ctr2 in center_gravity[ctr, :10]:
+        print ("%s" % terms[ctr2])
+    print ("---------------------")
 
-plt.scatter(k_model.cluster_centers_)
+#plt.scatter(k_model.cluster_centers_)
 #plt.xlabel(vectorized_value)
 #plt.ylabel(vectorized_value)
-plt.show()
+#plt.show()

@@ -36,20 +36,18 @@
                 <div class="col-5">
                   <div class="input-group m-0">                   
                     <!-- <div>Find your gadget here</div>  -->
-                    <input class="form-control me-2" type="search" placeholder="Search your Gadget" name="txtsearch">
+                    <input class="form-control" type="text" placeholder="Search your Gadget" name="txtsearch">
                     <button class="btn btn-outline-success" type="submit">Search</button>
                   </div>
                 </div>
                 <div class="col-2 text-center align-middle fs-5"> or you can </div>
                 <div class="col-5">
-                  <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" style="width: 250px">
-                    Select Model
-                    </button>
-                    <ul class="dropdown-menu">
-                      {{listvalue}}
-                    </ul>
-                </div>
+                  <select class="form-control custom-select custom-select-lg mb-3">
+                    <option selected>Open this select menu</option>
+                    {% for optionvalue in listvalue%}
+                    <option value="{{optionvalue}}">{{optionvalue}}</option>
+                    {% endfor %}
+                  </select>
                 </div>
               </div>
           </div>
@@ -58,7 +56,9 @@
 
           <div class="col-12">
             <div class=" card">
-              <span class="card-body">This system will give a recommendation of your choosen gadget with the help of generative AI</span>
+              <span class="card-body">
+                {{ai_result}}
+                This system will give a recommendation of your choosen gadget with the help of generative AI</span>
             </div>
           </div>
 
@@ -135,10 +135,6 @@
               </div>
             </div>  
         </div>
-
-
-
-
         </div>
       </div>
   </div>

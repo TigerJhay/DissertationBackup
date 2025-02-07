@@ -31,26 +31,15 @@ views = Blueprint(__name__, "views")
 def home():
      df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
      distinct_value = df_reviews["Model"].unique()
-     html_gadgetlist = ""
-     for values in distinct_value:
-          html_gadgetlist += f"<li><a class='dropdown-item' href='#'>{values}</a></li>"
-     html_gadgetlist
-     return render_template("index.html", listvalue = html_gadgetlist)
-     #return render_template("testscript.html")
-
-# @views.route("/generateResult", methods=["GET","POST"])
-# def fetchAIdesc():
-#      searchstring = str(request.form['txtsearch'])
+     return render_template("index.html", listvalue = distinct_value)
 
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():
      gadget_search = str(request.form['txtsearch'])
-     
-     
-     # searchstring = str(request.form['txtsearch'])
-     # genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-     # model = genai.GenerativeModel("gemini-1.5-flash")
-     # response = model.generate_content(searchstring)    
+     gadget_search = "Iphone"
+     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+     model = genai.GenerativeModel("gemini-1.5-flash")
+     airesult = str(model.generate_content(gadget_search).text)    
      # flash("Generated AI response: " + str(response.text))
 
 
@@ -132,7 +121,7 @@ def naivebayes_algo():
 
      distinct_model = df_reviews["Model"].unique()
 
-     df_reviews.to_excel("clean_data.xlsx",sheet_name="Cleansheet")
+     # df_reviews.to_excel("clean_data.xlsx",sheet_name="Cleansheet")
 
      df_naivebayes = pd.DataFrame(df_reviews)
      df_lstm = pd.DataFrame(df_reviews)
@@ -158,13 +147,12 @@ def naivebayes_algo():
      nb_result = classifier.predict(gadget_review_vector)
     
      for result in nb_result:
-          value = "No value"
+          nb_value = "No value"
           if result==0:
-               value = "The sentiment is positive"
+               nb_value = "The sentiment is positive"
           else:
-               value = "The sentiment is positive"
-     
-     flash(value)
+               nb_value = "The sentiment is positive"
+
      
      #---------------------------------------
      # This portion is for LSTM algorithm
@@ -384,7 +372,16 @@ def naivebayes_algo():
      plt.grid()
      #plt.show()
 
-     return render_template("index.html")
+     return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value)
+
+
+
+
+
+
+
+
+
 
 # ---------------------------------------------------------------------------
 # Next VIEW for AI
@@ -401,18 +398,3 @@ def fetchAIdesc():
      #response.text
      flash("***Updated Generated AI response: " + str(response.text.replace("**","\n")))
      return render_template("index.html")
-  
-@views.route("/search_gadget_description", methods=["GET","POST"])
-def fetchAIdescription():
-     searchstring = str(request.form['txtSearchValue'])
-     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-     model = genai.GenerativeModel("gemini-1.5-flash")
-     response = model.generate_content(searchstring)    
-     flash("Generated AI response: " + str(response.text))
-     return render_template("testscript.html")
-
-@views.route("/profile")
-def profile():
-    args = request.args
-    name = args.get('name')
-    return render_template("index.html", name=name)
