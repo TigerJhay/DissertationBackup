@@ -48,6 +48,7 @@ def naivebayes_algo():
      nltk.download('punkt_tab')
 
      df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
+     #df_reviews = pd.read_csv("./templates/Datasets/Main_DataSet_utf8_noUsrName.csv", encoding="ISO-8859-1")
      df_reviews.head(20)
    
      #Remove Column Username since this column is unnecessary
