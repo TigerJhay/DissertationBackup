@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from googletrans import Translator
+from sklearn.preprocessing import LabelEncoder
 
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -81,18 +82,17 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
 #vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
-vectorize = CountVectorizer()
-
+#vectorize = CountVectorizer()
 
 y_val = df_reviews["Rating"]
-x_val = df_reviews["Reviews"]
-#x_val = df_vectorized_x
+
+label_encoder = LabelEncoder()
+x_val = label_encoder.fit_transform(df_reviews["Reviews"])
 
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
-
-x_train_vec = vectorize.fit_transform(x_train.values)
 dec_tree = DecisionTreeClassifier()
-dec_tree.fit(x_train_vec, y_train)
+
+dec_tree.fit(x_train, y_train)
 y_pred = dec_tree.predict(x_test)
 
 from sklearn.metrics import confusion_matrix
