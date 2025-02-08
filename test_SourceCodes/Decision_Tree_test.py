@@ -12,14 +12,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from googletrans import Translator
-from sklearn.preprocessing import LabelEncoder
+
 
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt_tab')
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
-df_reviews = pd.read_csv("../templates/Datasets/Main_DataSet_V1.csv", encoding="ISO-8859-1")
+df_reviews = pd.read_csv("../templates/Datasets/Main_DataSet.csv", encoding="Latin_1")
 #df_reviews = pd.read_csv("../templates/Datasets/Main_Dataset.csv", encoding="latin_1")
 #df_reviews.head(20)
 #distinct_value = df_reviews["Username"].unique()
@@ -83,17 +83,34 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True
 
 #vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
 #vectorize = CountVectorizer()
+test = df_reviews["Rating"].unique()
+test
+from sklearn.preprocessing import LabelEncoder
+label_encoder = LabelEncoder
+from sklearn import metrics
+from sklearn import tree
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
 
-y_val = df_reviews["Rating"]
-
-label_encoder = LabelEncoder()
-x_val = label_encoder.fit_transform(df_reviews["Reviews"])
+y_val = label_encoder().fit_transform(df_reviews["Rating"])
+#y_val = df_reviews["Rating"]
+x_val = vectorize.fit_transform(df_reviews["Reviews"])
 
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+
+#x_train_vec = vectorize.fit_transform(x_train)
+#y_train_vec = vectorize.fit_transform(x_test)
+
+#x_train_vec.todense()
+#y_train_vec.todense()
 dec_tree = DecisionTreeClassifier()
 
 dec_tree.fit(x_train, y_train)
 y_pred = dec_tree.predict(x_test)
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+
+import matplotlib.pyplot as plt
+tree.plot_tree(dec_tree)
+plt.show()
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
