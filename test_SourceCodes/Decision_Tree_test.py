@@ -89,22 +89,20 @@ from sklearn.preprocessing import LabelEncoder
 label_encoder = LabelEncoder
 from sklearn import metrics
 from sklearn import tree
-vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
+#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
+vectorize = CountVectorizer()
 
-y_val = label_encoder().fit_transform(df_reviews["Rating"])
-#y_val = df_reviews["Rating"]
+y_val = df_reviews["Rating"]
 x_val = vectorize.fit_transform(df_reviews["Reviews"])
 
+#x_val = label_encoder.fit_transform(df_reviews["Reviews"])
 x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
 
-#x_train_vec = vectorize.fit_transform(x_train)
-#y_train_vec = vectorize.fit_transform(x_test)
-
-#x_train_vec.todense()
-#y_train_vec.todense()
-dec_tree = DecisionTreeClassifier()
-
-dec_tree.fit(x_train, y_train)
+#use for pruning
+#dec_tree = DecisionTreeClassifier(max_depth=5, random_state=0)
+dec_tree = DecisionTreeClassifier(ccp_alpha=0.002, random_state=0)
+dec_tree.fit(x_train, y_train).tree_.node_count
+#dec_tree.fit(x_train, y_train)
 y_pred = dec_tree.predict(x_test)
 print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
 

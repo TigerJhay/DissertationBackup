@@ -26,10 +26,10 @@ custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 #df_reviews = pd.read_csv("./templates/Amazon_Review.csv")
 df_reviews = pd.read_csv("../templates/Datasets/Main_Dataset.csv", encoding="latin_1")
 df_reviews.head(20)
-distinct_value = df_reviews["Username"].unique()
-
-trans_interpreter = Translator()
-df_reviews['Reviews'] = df_reviews.apply(lambda x: trans_interpreter.translate(x['Reviews'],src="auto",dest="en").text, axis=1)
+distinct_value = df_reviews["Model"].unique()
+#df_reviews = df_reviews[df_reviews["Reviews"].str.contains("ipad")]
+#trans_interpreter = Translator()
+#df_reviews.apply(lambda x: trans_interpreter.translate(x['Reviews'],src="auto",dest="en").text, axis=1)
 #df_reviews
 
 #translated_string = trans_interpreter.translate("maayos naman ang lagay ko", src="auto", dest="en").text
@@ -90,8 +90,8 @@ df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True
 df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
 
 df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
-vectorize = TfidfVectorizer(stop_words='english')
-
+#vectorize = TfidfVectorizer(stop_words='english')
+vectorize = CountVectorizer()
 vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
 
 k_value = 10
