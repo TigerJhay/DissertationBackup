@@ -103,12 +103,16 @@ kmean_model
 
 center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
 terms = vectorize.get_feature_names_out()
-
+kmeans_value =""
 for ctr in range(k_value):
-    print ("Cluster %d: " % ctr)
+    print ("<br> Cluster %d: " % ctr)
+    kmeans_value += "Cluster %d: " % ctr
     for ctr2 in center_gravity[ctr, :10]:
-        print ("%s" % terms[ctr2])
+        print ("<br> %s" % terms[ctr2])
+        kmeans_value += " %s" % terms[ctr2]
     print ("---------------------")
+
+print (kmeans_value)
 
 #plt.scatter(k_model.cluster_centers_)
 #plt.xlabel(vectorized_value)

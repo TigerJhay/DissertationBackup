@@ -36,7 +36,6 @@ def home():
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():
      gadget_search = str(request.form['txtsearch'])
-     gadget_search = "Iphone"
      genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
      model = genai.GenerativeModel("gemini-1.5-flash")
      airesult = str(model.generate_content(gadget_search).text)    
@@ -367,7 +366,30 @@ def naivebayes_algo():
      plt.grid()
      #plt.show()
 
-     return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value)
+
+
+     df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
+     #vectorize = TfidfVectorizer(stop_words='english')
+     vectorize = CountVectorizer()
+     vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
+
+     k_value = 10
+     k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
+     kmean_model = k_model.fit_transform(vectorized_value)
+     kmean_model
+     #df_reviews["clusters"] = k_model.labels_
+     #df_reviews.head()
+
+     center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+     terms = vectorize.get_feature_names_out()
+     
+     kmeans_value =""
+     for ctr in range(k_value):
+          kmeans_value += "Cluster %d: " % ctr
+          for ctr2 in center_gravity[ctr, :10]:
+               kmeans_value += " %s" % terms[ctr2]
+   
+     return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, kmeans_result = kmeans_value)
 
 
 
