@@ -61,6 +61,7 @@ df_reviews = df_reviews.drop(df_reviews[df_reviews["Rating"]=='3'].index, inplac
 #--------------------------------------------------------------------------------------------
 #Extracting phrases for creating corpora that will be use in decision tree recommendation
 #--------------------------------------------------------------------------------------------
+
 df_reviews = df_reviews.drop(axis=1, columns=["Date"])
 df = pd.DataFrame()
 def extract_attrib(attrib_value):
@@ -68,7 +69,7 @@ def extract_attrib(attrib_value):
   df_temp = df_reviews.loc[df_reviews["Reviews"].str.contains(attrib_value, regex=False)]
   df_temp["Reviews"] = df_temp["Reviews"].str.replace('[0-9]', "", regex=True)
   
-  if attrib_value == "battery":  
+  if attrib_value == "battery":
     df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}battery\b(?:\W+\w+){0,2})')
   elif attrib_value == "speed":
     df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}speed\b(?:\W+\w+){0,2})')
@@ -86,18 +87,37 @@ def extract_attrib(attrib_value):
 list_attrib = ["battery", "screen", "speed", "memory"]
 for attrib in list_attrib:
   df = pd.concat([df, extract_attrib(attrib)])
-  print("\n Value attribute is: ", attrib)
+  #print("\n Value attribute is: ", attrib)
   #df.to_csv(attrib+"_All_corpus.csv", index=False)
 
-model_list = ["iPad 9th Gen"]
-df_attrib = df.loc[df["Reviews"].str.contains("battery", regex=False)]
-df_model = df_attrib.loc[df_attrib["Model"].str.contains(model_list, regex=False)]
-rpos = df_model.loc[df_model["Rating"].str.contains("positive", regex=False)].count()
-rneg = df_model.loc[df_model["Rating"].str.contains("negative", regex=False)].count()
-
-print (df_model, rpos, rneg)
-
 attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR" "Spd_NR", "Mem_PR", "Mem_NR"])
-attrib_matrix = []
+
+gadget_list = distinct_value = df_reviews["Model"].unique()
+def convert_to_matrix(gadget_name, gadget_attrib):
+  df_attrib = df.loc[df["Reviews"].str.contains(gadget_name, regex=False)]
+  df_model = df_attrib.loc[df_attrib["Model"].str.contains(gadget_attrib, regex=False)]
+  rpos = df_model.loc[df_model["Rating"].str.contains("positive", regex=False)].count()
+  rneg = df_model.loc[df_model["Rating"].str.contains("negative", regex=False)].count()
+  row_value = [gadget_name, rpos, rneg]
+  print (row_value)
+  return row_value
+
+
+for gadget_value in gadget_list:
+  attrib_matrix["Model"] = gadget_list
+
+attrib_matrix["Batt_PR"] = "Testing"
+attrib_matrix.loc[attrib_matrix["Model"].str.contains("iPad 9th Gen")] = "test"
+
+for gadget_value in gadget_list:
+  for attrib in list_attrib:
+    attrib_matrix["Model"][]
+    # print (gadget_value + " " + attrib)
+    row_value = convert_to_matrix(gadget_value, attrib)
+    
+    
+    # row_value = pd.concat([attrib_matrix, convert_to_matrix(gadget_value, attrib)])
+
+row_value
 #all_corpus = pd.concat([df_atttribute1, df_atttribute2, df_atttribute3, df_atttribute4])
 #all_co1rpus.to_csv("All_corpus.csv", index=False)
