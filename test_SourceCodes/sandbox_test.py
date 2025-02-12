@@ -90,34 +90,40 @@ for attrib in list_attrib:
   #print("\n Value attribute is: ", attrib)
   #df.to_csv(attrib+"_All_corpus.csv", index=False)
 
-attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR" "Spd_NR", "Mem_PR", "Mem_NR"])
+attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR"])
 
 gadget_list = distinct_value = df_reviews["Model"].unique()
-def convert_to_matrix(gadget_name, gadget_attrib):
-  df_attrib = df.loc[df["Reviews"].str.contains(gadget_name, regex=False)]
-  df_model = df_attrib.loc[df_attrib["Model"].str.contains(gadget_attrib, regex=False)]
-  rpos = df_model.loc[df_model["Rating"].str.contains("positive", regex=False)].count()
-  rneg = df_model.loc[df_model["Rating"].str.contains("negative", regex=False)].count()
-  row_value = [gadget_name, rpos, rneg]
-  print (row_value)
+#gadget_list = "iPad 9th Gen"
+
+def convert_to_matrix(gadget_model):
+
+  df_model = df.loc[df["Model"].str.contains(gadget_model)]
+  df_rev = df_model.loc[df_model["Reviews"].str.contains("battery")]
+  batt_rpos = df_rev["Rating"].value_counts().get("positive",0)
+  batt_rneg = df_rev["Rating"].value_counts().get("negative",0)
+
+  df_rev = df_model.loc[df_model["Reviews"].str.contains("screen")]
+  scr_rpos = df_rev["Rating"].value_counts().get("positive",0)
+  scr_rneg = df_rev["Rating"].value_counts().get("negative",0)
+
+  df_rev = df_model.loc[df_model["Reviews"].str.contains("speed")]
+  spd_rpos = df_rev["Rating"].value_counts().get("positive",0)
+  spd_rneg = df_rev["Rating"].value_counts().get("negative",0)
+
+  df_rev = df_model.loc[df_model["Reviews"].str.contains("memory")]
+  mem_rpos = df_rev["Rating"].value_counts().get("positive",0)
+  mem_rneg = df_rev["Rating"].value_counts().get("negative",0)
+
+
+  row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg]
+
   return row_value
 
-
-for gadget_value in gadget_list:
-  attrib_matrix["Model"] = gadget_list
-
-attrib_matrix["Batt_PR"] = "Testing"
-attrib_matrix.loc[attrib_matrix["Model"].str.contains("iPad 9th Gen")] = "test"
-
-for gadget_value in gadget_list:
-  for attrib in list_attrib:
-    attrib_matrix["Model"][]
-    # print (gadget_value + " " + attrib)
-    row_value = convert_to_matrix(gadget_value, attrib)
-    
+for colname in gadget_list:
+  attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
+  #attrib_matrix = pd.concat([attrib_matrix, convert_to_matrix(colname)]) 
     
     # row_value = pd.concat([attrib_matrix, convert_to_matrix(gadget_value, attrib)])
 
-row_value
 #all_corpus = pd.concat([df_atttribute1, df_atttribute2, df_atttribute3, df_atttribute4])
 #all_co1rpus.to_csv("All_corpus.csv", index=False)
