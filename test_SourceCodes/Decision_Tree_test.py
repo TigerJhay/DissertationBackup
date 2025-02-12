@@ -10,6 +10,7 @@ lemmatizer = WordNetLemmatizer()
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
+from sklearn import naive_bayes
 from sklearn.tree import DecisionTreeClassifier
 from googletrans import Translator
 
@@ -30,7 +31,7 @@ df_reviews = pd.read_csv("../templates/Datasets/Main_DataSet.csv", encoding="Lat
 
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 df_reviews["Reviews"] = df_reviews["Reviews"].astype(str)
-# Checking for missing values. Fill necessary and drop if reviews are null
+# Checking for missing values. Fill necessary and drop if reviewlas are null
 if df_reviews["Username"].isnull().values.any() == True:
     df_reviews["Username"] = df_reviews["Username"].fillna("No Username")       
 if df_reviews["Date"].isnull().values.any() == True:
@@ -78,8 +79,18 @@ df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 # 1 - Positive Rating or review, These are with rating of 4 & 5
 # 3 - Neutral Rating or review, These are with rating of 3
 df_reviews["Rating"] = df_reviews["Rating"].astype(str)
-df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', '0', regex=True)
-df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', '1', regex=True)
+df_reviews["Rating"] = df_reviews["Rating"].str.replace('[1-2]', 'negative', regex=True)
+df_reviews["Rating"] = df_reviews["Rating"].str.replace('[3-5]', 'positive', regex=True)
+
+
+df_atttribute = df_reviews.loc[df_reviews["Model"].str.contains('Test Phone', regex=False)]
+df_atttribute = df_atttribute.loc[df_reviews["Reviews"].str.contains('battery', regex=False)]
+df_atttribute["Reviews"] = df_atttribute["Reviews"].str.replace('[0-9]', "", regex=True)
+df_atttribute["Reviews"] = df_atttribute["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}battery\b(?:\W+\w+){0,2})')
+df_atttribute = df_atttribute.dropna(axis=0, subset=['Reviews'], how='any')
+#df_atttribute.to_csv('battery.csv', index=True)
+
+
 
 #vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
 #vectorize = CountVectorizer()
@@ -89,8 +100,8 @@ from sklearn.preprocessing import LabelEncoder
 label_encoder = LabelEncoder
 from sklearn import metrics
 from sklearn import tree
-#vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
-vectorize = CountVectorizer()
+vectorize = TfidfVectorizer(use_idf=True, lowercase=True, strip_accents='unicode')
+#vectorize = CountVectorizer()
 
 y_val = df_reviews["Rating"]
 x_val = vectorize.fit_transform(df_reviews["Reviews"])
