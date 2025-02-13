@@ -120,10 +120,7 @@ def convert_to_matrix(gadget_model):
   return row_value
 
 for colname in gadget_list:
-  attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
-  #attrib_matrix = pd.concat([attrib_matrix, convert_to_matrix(colname)]) 
-    
-    # row_value = pd.concat([attrib_matrix, convert_to_matrix(gadget_value, attrib)])
 
-#all_corpus = pd.concat([df_atttribute1, df_atttribute2, df_atttribute3, df_atttribute4])
-#all_co1rpus.to_csv("All_corpus.csv", index=False)
+  attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
+
+attrib_matrix.to_csv("../templates/Datasets/Main_Matrix.csv", index=False)

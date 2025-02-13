@@ -3,10 +3,6 @@ import google.generativeai as genai
 import os
 import pandas as pd
 import numpy as np
-
-#------------------------------
-# Libraries and imports to use
-#------------------------------
 from numpy import array
 import re
 import nltk #from wordcloud import wordcloud, STOPWORDS
@@ -23,15 +19,17 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 
-# from HTMLparser import HTMLParser
-
 views = Blueprint(__name__, "views")
 
 @views.route("/")
 def home():
      df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
-     distinct_value = df_reviews["Model"].unique()
-     return render_template("index.html", listvalue = distinct_value)
+     device_genre = df_reviews[["Model","Type","Brand"]].drop_duplicates()
+
+     device_genre = df_reviews[["Brand"]].drop_duplicates()
+     df_reviews.loc[(df_reviews["Brand"]=="Apple")& (df_reviews["Type"]=="Tablet"),["Model",'Type',"Brand"]].drop_duplicates()
+     #device_genre = ["test_A", "Test_B", "Test_C", "Test_D"]
+     return render_template("index.html", device_genre = device_genre.to_numpy())
 
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():
