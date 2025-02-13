@@ -18,18 +18,37 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
-
 views = Blueprint(__name__, "views")
+import mysql.connector
+from sqlalchemy import create_engine
+
+mydb = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  password="",
+  database="dbmain_dissertation"
+)
+dbcmd = mydb.cursor()
+dbcmd.execute("SELECT * FROM gadget_reviews")
+myresult = dbcmd.fetchall()
+df_reviews = pd.read_sql("SELECT * FROM gadget_reviews", mydb)
+
+engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
 
 @views.route("/")
 def home():
-     df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
      device_genre = df_reviews[["Model","Type","Brand"]].drop_duplicates()
+     brands = df_reviews["Brand"].drop_duplicates()
+     df_reviews.loc[(df_reviews["Brand"]=="Apple")& (df_reviews["Type"]=="Tablet"),["Model","Type","Brand"]].drop_duplicates()
+     return render_template("index.html", brands = brands.to_numpy())
 
-     device_genre = df_reviews[["Brand"]].drop_duplicates()
-     df_reviews.loc[(df_reviews["Brand"]=="Apple")& (df_reviews["Type"]=="Tablet"),["Model",'Type',"Brand"]].drop_duplicates()
-     #device_genre = ["test_A", "Test_B", "Test_C", "Test_D"]
-     return render_template("index.html", device_genre = device_genre.to_numpy())
+@views.route("/loadType", methods=["GET", "POST"])
+def loadType():
+     #gadget_Type = str(request.form['gadgetType'])
+     gadget_Brand = str(request.form["gadgetBrand"])
+     df_reviews = pd.read_csv("./templates/Datasets/Main_Dataset.csv", encoding="latin_1")
+     gadgetType = df_reviews.loc[(df_reviews["Brand"]==gadget_Brand),["Type"]].drop_duplicates()
+     return render_template("index.html", gadgetType = gadgetType.to_numpy())
 
 @views.route("/testnaivealgo", methods=["GET", "POST"])
 def naivebayes_algo():

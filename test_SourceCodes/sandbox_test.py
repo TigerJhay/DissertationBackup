@@ -14,6 +14,20 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
+import mysql.connector
+from sqlalchemy import create_engine
+
+mysqldb = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  password="",
+  database="dbmain_dissertation"
+)
+dbcmd = mysqldb.cursor()
+dbcmd.execute("SELECT * FROM gadget_reviews")
+myresult = dbcmd.fetchall()
+
+
 
 lemmatizer = WordNetLemmatizer()
 nltk.download('stopwords')
@@ -21,7 +35,8 @@ nltk.download('wordnet')
 nltk.download('punkt_tab')
 custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
-df_reviews = pd.read_csv("../templates/Datasets/Main_DataSet.csv", encoding="Latin_1")
+df_reviews = pd.read_sql("SELECT * FROM gadget_reviews", mysqldb)
+
 df_reviews['Reviews'] = df_reviews['Reviews'].str.lower()
 
 if df_reviews["Username"].isnull().values.any() == True:
@@ -120,7 +135,7 @@ def convert_to_matrix(gadget_model):
   return row_value
 
 for colname in gadget_list:
-
   attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
 
+attrib_matrix.to_sql(con=engine, name="attribute_table", if_exists='replace', index=False)
 attrib_matrix.to_csv("../templates/Datasets/Main_Matrix.csv", index=False)
