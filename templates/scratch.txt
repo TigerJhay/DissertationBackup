@@ -20,3 +20,47 @@
             <div id="resultAI">{{message}}</div>
             {% endfor%}
         </form>
+
+        
+@app.route("/loadType", methods=["GET", "POST"])
+def loadType():
+    #  dbcmd = mydb.cursor()
+    #  dbcmd.execute("SELECT * FROM gadget_reviews")
+    #  myresult = dbcmd.fetchall()
+    #  temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
+    #  brands = temp_df["Brand"].drop_duplicates()
+     gadget_Brand = str(request.form["gadgetBrand"])
+     #gadget_Type = str(request.form['gadgetType'])
+     dbcmd.execute("SELECT * FROM gadget_reviews")
+     myresult = dbcmd.fetchall()
+     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +gadget_Brand +"'", mydb)
+     gadgetType = temp_df["Type"].drop_duplicates()
+     return render_template("index.html", gadgetType = gadgetType.to_numpy(), gadget_Brand= session["brands"])
+
+@app.route("/loadType2", methods=["GET", "POST"])
+def loadType2():
+     gadget_Brand = str(request.form["gadgetBrand"])    
+     dbcmd.execute("SELECT * FROM gadget_reviews")
+     myresult = dbcmd.fetchall()
+     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +gadget_Brand +"'", mydb)
+     gadgetType = temp_df["Type"].drop_duplicates()
+     return render_template("index.html", gadgetType = gadgetType.to_numpy())
+
+
+
+     {% for optionvalue in brands%}
+                        <option value="{{optionvalue}}">{{optionvalue}}</option>
+                      {% endfor %}
+
+
+                      function generate_brands(){
+                        var varBrands = {{brands|tojson}}
+                        var select = document.getElementById("brandlist");
+                        for(var ctr=0; ctr<= varBrands.length; ctr++){
+                          optionvalue = varBrands[ctr];
+                          let opt = document.createElement("option");
+                          opt.textContent = optionvalue;
+                          opt.value = optionvalue;
+                          select.appendChild(optionvalue)
+                        }
+                      }
