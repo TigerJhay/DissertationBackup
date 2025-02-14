@@ -27,7 +27,7 @@ dbcmd = mysqldb.cursor()
 dbcmd.execute("SELECT * FROM gadget_reviews")
 myresult = dbcmd.fetchall()
 
-
+engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
 
 lemmatizer = WordNetLemmatizer()
 nltk.download('stopwords')

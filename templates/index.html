@@ -11,11 +11,7 @@
 <body>
   
   <script type="text/javascript">
-    function to_submit(){
-      alert("Testing");
-      let form = document.getElementById("indexform");
-      form.submit();
-    }
+
     
   </script> 
   
@@ -54,30 +50,37 @@
                 <div class="col-4 text-center align-middle fs-5"> or you can search below </div>
                 <div class="col-12">
                   <div class="p-2 w-25 d-inline-block">
-                    <form action="loadType" name="LoadListItems" method="POST">
-                    <select name="gadgetBrand" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                    <option selected value="None">Brand</option>
-                      {% for optionvalue in brands%}
-                        <option value="{{optionvalue}}">{{optionvalue}}</option>
-                      {% endfor %}
+                    <form action="brandtype" name="LoadListItems" method="POST">
+                    <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                      <!-- <option selected value="None" >Brand</option> -->
+                        {% for optionvalue in brands%}
+                          <option value="{{optionvalue}}">{{optionvalue}}</option>
+                        {% endfor %}
                     </select>
+                    <div class="12">selected brand: {{selectbrand}}</div>
                   </form>
                 </div>
                 <div class="p-2 w-25 d-inline-block">
-                  <select class="form-control custom-select custom-select-lg mb-3">
-                    <option selected>Type</option>
+                  <form action="typemodel" name="LoadListType" method="POST">
+                  <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                    <!-- <option selected>Type</option> -->
                       {% for optionvalue in gadgetType%}
                       <option value="{{optionvalue}}">{{optionvalue}}</option>
                       {% endfor %}
-                  </select>
+                    </select>
+                    <div class="12">selected type: {{selectedtype}}</div>
+                  </form>
                   </div>
                   <div class="p-2 w-25 d-inline-block">
-                  <select class="form-control custom-select custom-select-lg mb-3">
-                    <option selected>Model</option>
-                      {% for optionvalue in model_list%}
-                      <option value="{{optionvalue}}">{{optionvalue}}</option>
-                      {% endfor %}
-                  </select>
+                    <form action="generaterecomendation" name="LoadListType" method="POST">
+                      <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                      <!-- <option selected>Model</option> -->
+                        {% for optionvalue in gadgetModel%}
+                        <option value="{{optionvalue}}">{{optionvalue}}</option>
+                        {% endfor %}
+                      </select>
+                      <div class="12">selected type: {{selectedmodel}}</div>
+                  </form>
                   </div>
                 
                 </div>
