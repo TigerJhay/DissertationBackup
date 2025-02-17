@@ -163,8 +163,7 @@ def naivebayes_algo():
                nb_value = "The sentiment is positive"
           else:
                nb_value = "The sentiment is positive"
-
-     
+               
      #---------------------------------------
      # This portion is for LSTM algorithm
      #---------------------------------------
@@ -382,8 +381,6 @@ def naivebayes_algo():
      plt.legend()
      plt.grid()
      #plt.show()
-
-
 
      df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
      #vectorize = TfidfVectorizer(stop_words='english')

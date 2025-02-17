@@ -21,7 +21,6 @@ lemmatizer = WordNetLemmatizer()
 import mysql.connector
 from sqlalchemy import create_engine
 
-
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
 mydb = mysql.connector.connect(
@@ -67,16 +66,20 @@ def modelcomplete():
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
     #test values only
-    brands = "Apple"
-    type = "Tablet"
-    model = "iPad Pro 13Inch M4"
-    temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands +"' and Type='"+type+"' and Model='"+model+"'", mydb)
-    temp_df
-    gadget_search = brands + " " + type + " " + model
-
-
+    # brands = "Apple"
+    # type = "Tablet"
+    # model = "iPad Pro 13Inch M4"
+    brands = session["brands"]
+    type = session["type"]
+    model =  "iPad Pro 11inch M4"#str(request.form["gadgetModel"])
+    gadget_search =  "ipad"
     #gadget_search = str(request.form['txtsearch'])
     
+    temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands +"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
+    temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb) 
+    str_reco = "Based on the "+ str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews"
+    str_reco = str_reco.split("\n")
     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
     model = genai.GenerativeModel("gemini-1.5-flash")
     airesult = str(model.generate_content(gadget_search).text)    
@@ -101,7 +104,7 @@ def modelrecommendation():
     temp_df = temp_df.replace(r'http\S+', '', regex=True)
     temp_df = temp_df.replace(r"x000D", '', regex=True)
     temp_df = temp_df.replace(r'<[^>]+>', '', regex= True)
-
+    
     temp_df = temp_df.replace('[^a-zA-Z0-9]', ' ', regex=True)
     temp_df = temp_df.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
     temp_df = temp_df.replace(r" +", ' ', regex=True)
@@ -129,6 +132,7 @@ def modelrecommendation():
     # This rating will be drop to be dataframe since these are all neither positive or negative
     temp_df = temp_df.drop(temp_df[temp_df["Rating"]=='3'].index, inplace=False)
     
+    #df_kmeans = temp_df
     #----------------------------------------------------------
      #This portion is part of Naive Bayes, Multinomial Algorithm
      #----------------------------------------------------------
@@ -155,8 +159,6 @@ def modelrecommendation():
         else:
             nb_value = "The sentiment is positive"
 
-    
-    
     embedding_size = 50
      # cap each review to 100 words (tokens)
 
@@ -241,8 +243,7 @@ def modelrecommendation():
                 input_size = input_size,
                 hidden_size = hidden_size,
                 num_layers = num_stacked_layers,
-                batch_first = True
-                )
+                batch_first = True)
 
             self.dropout = nn.Dropout(drop_prob) # randomly sets outputs of a tensor to 0 during training
 
@@ -251,7 +252,7 @@ def modelrecommendation():
 
         def forward(self, x):
             batch_size = x.size(0)
-
+            
             # Initialize the cell state and hidden state
             h0 = torch.zeros((self.num_stacked_layers, batch_size, self.hidden_size)).to(device)
             c0 = torch.zeros((self.num_stacked_layers, batch_size, self.hidden_size)).to(device)
@@ -351,10 +352,9 @@ def modelrecommendation():
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-    import matplotlib.pyplot as plt
-
+    import matplotlib.pyplot as pl
+    
     fig = plt.figure(figsize = (10, 3))
-
     plt.subplot(1, 2, 1)
     plt.plot(epoch_train_accs, label='Train Accuracy')
     plt.plot(epoch_test_accs, label='Test Accuracy')
@@ -370,33 +370,29 @@ def modelrecommendation():
     plt.title("Loss")
     plt.legend()
     plt.grid()
-    #plt.show()
 
+    # df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
+    # #vectorize = TfidfVectorizer(stop_words='english')
+    # vectorize = CountVectorizer()
+    # vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
+    # k_value = 10
+    # k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
+    # kmean_model = k_model.fit_transform(vectorized_value)
+    # kmean_model
+    # #df_reviews["clusters"] = k_model.labels_
+    # #df_reviews.head()
 
-
-    df_reviews["Reviews"] = df_reviews["Reviews"].values.astype("U")
-    #vectorize = TfidfVectorizer(stop_words='english')
-    vectorize = CountVectorizer()
-    vectorized_value = vectorize.fit_transform(df_reviews["Reviews"])
-
-    k_value = 10
-    k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-    kmean_model = k_model.fit_transform(vectorized_value)
-    kmean_model
-    #df_reviews["clusters"] = k_model.labels_
-    #df_reviews.head()
-
-    center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
-    terms = vectorize.get_feature_names_out()
+    # center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+    # terms = vectorize.get_feature_names_out()
     
-    kmeans_value =""
-    for ctr in range(k_value):
-        kmeans_value += "Cluster %d: " % ctr
-        for ctr2 in center_gravity[ctr, :10]:
-            kmeans_value += " %s" % terms[ctr2]
+    # kmeans_value =""
+    # for ctr in range(k_value):
+    #     kmeans_value += "Cluster %d: " % ctr
+    #     for ctr2 in center_gravity[ctr, :10]:
+    #         kmeans_value += " %s" % terms[ctr2]
 
-    return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, kmeans_result = kmeans_value)
-
+    
+    return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, str_recommendation = str_reco) #kmeans_result = kmeans_value)
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)

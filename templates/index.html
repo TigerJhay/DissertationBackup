@@ -52,7 +52,7 @@
                   <div class="p-2 w-25 d-inline-block">
                     <form action="brandtype" name="LoadListItems" method="POST">
                     <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                      <!-- <option selected value="None" >Brand</option> -->
+                      <option selected value="None" >Brand</option>
                         {% for optionvalue in brands%}
                           <option value="{{optionvalue}}">{{optionvalue}}</option>
                         {% endfor %}
@@ -63,7 +63,7 @@
                 <div class="p-2 w-25 d-inline-block">
                   <form action="typemodel" name="LoadListType" method="POST">
                   <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                    <!-- <option selected>Type</option> -->
+                    <option selected>Type</option>
                       {% for optionvalue in gadgetType%}
                       <option value="{{optionvalue}}">{{optionvalue}}</option>
                       {% endfor %}
@@ -74,7 +74,7 @@
                   <div class="p-2 w-25 d-inline-block">
                     <form action="generaterecomendation" name="LoadListType" method="POST">
                       <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                      <!-- <option selected>Model</option> -->
+                      <option selected>Model</option>
                         {% for optionvalue in gadgetModel%}
                         <option value="{{optionvalue}}">{{optionvalue}}</option>
                         {% endfor %}
@@ -107,6 +107,10 @@
               <div class="card-body"> 
                   <h6 class="card-title">Details:</h6>
                   <p class="card-text">
+                    {% for str_recommendation in str_recommendation %}
+                      {{str_recommendation}} <br>
+                    {% endfor %}
+
                     {% for message in get_flashed_messages() %}
                       {{message}}
                     {% endfor %}
