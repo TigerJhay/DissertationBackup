@@ -20,13 +20,9 @@
       <div class="sidebar">
           <div class="fs-5 text-center" style="height: 5rem;">Recommender System</div>
           <ul>
-              <li><a href="#"><i class="fas fa-home"></i>Home</a></li>
-              <li><a href="#"><i class="fas fa-user"></i>Lorem Ipsum</a></li>
+              <li><a href="#"><i class="fas fa-home"></i>Main</a></li>
+              <li><a href="/newdataset"><i class="fas fa-user"></i>New Dataset</a></li>
               <li><a href="#"><i class="fas fa-address-card"></i>Lorem Ipsum</a></li>
-              <li><a href="#"><i class="fas fa-project-diagram"></i>Lorem Ipsum</a></li>
-              <li><a href="#"><i class="fas fa-blog"></i>Lorem Ipsum</a></li>
-              <li><a href="#"><i class="fas fa-address-book"></i>Lorem Ipsum</a></li>
-              <li><a href="#"><i class="fas fa-map-pin"></i>Lorem Ipsum</a></li>
           </ul> 
       </div>
       <div class="container-fluid main_content p-0">
@@ -38,16 +34,7 @@
           <div class="col-12 bg-warning">
             <div class="card">
               <div class="row">
-                <div class="col-5">
-                  <div class="input-group m-0">                   
-                    <!-- <div>Find your gadget here</div>  -->
-                    <form name="indexform" method="POST" action="testnaivealgo">
-                    <input class="form-control" type="text" placeholder="Search your Gadget" name="txtsearch">
-                    <button class="btn btn-outline-success d-inline-block" type="submit">Search</button>
-                    </form>
-                  </div>
-                </div>
-                <div class="col-4 text-center align-middle fs-5"> or you can search below </div>
+                <div class="col-12 text-center align-middle fs-5"> Select your gadget below </div>
                 <div class="col-12">
                   <div class="p-2 w-25 d-inline-block">
                     <form action="brandtype" name="LoadListItems" method="POST">
@@ -92,33 +79,39 @@
           <div class="col-12">
             <div class=" card">
               <span class="card-body">
-                
                 This system will give a recommendation of your choosen gadget with the help of generative AI</span>
             </div>
           </div>
-
           <div class="col-12">
             <div class="card">Extra Panel for other objects</div>
           </div>
-
-          <div class="col-8">
+          <div class="col-3">
             <div class="card">
-              <div class="card-header">Data for recommendation</div>
-              <div class="card-body"> 
-                  <h6 class="card-title">Details:</h6>
-                  <p class="card-text">
-                    {% for str_recommendation in str_recommendation %}
-                      {{str_recommendation}} <br>
-                    {% endfor %}
-
-                    {% for message in get_flashed_messages() %}
-                      {{message}}
-                    {% endfor %}
-                  </p>
-              </div>
+              <div class="card-header"><h6>Review summary</h6></div>
+                <div class="card-body col"> 
+                  <h6 class="card-title">Based on reviews of users and buyers</h6>
+                    <p class="card-text">
+                      {% for str_recommendation in str_recommendation %}
+                        {{str_recommendation}} <br>
+                      {% endfor %}
+                      {% for message in get_flashed_messages() %}
+                        {{message}}
+                      {% endfor %}
+                    </p>
+                </div>
             </div>   
           </div>
-
+          <div class="col-5">
+            <div class="card">
+              <div class="card-header"><h6>Recommendation based on the gathered reviews of different users and buyers</h6></div>
+                <div class="card-body col"> 
+                  <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
+                    <p class="card-text">              
+                        {{str_details}}                
+                    </p>
+                </div>
+            </div>   
+          </div>
           <div class="col-4">
             <div class="card">
                 <div class="card-header">Trending words and keywords</div>

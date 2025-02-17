@@ -29,12 +29,14 @@ mydb = mysql.connector.connect(
   password="",
   database="dbmain_dissertation"
 )
+engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
+
 # dbcmd = mydb.cursor()
 # dbcmd.execute("SELECT * FROM gadget_reviews")
 # myresult = dbcmd.fetchall()
 # df_reviews = pd.read_sql("SELECT * FROM gadget_reviews", mydb)
 
-engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
+
 
 @app.route("/")
 def home():
@@ -65,102 +67,156 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    #test values only
-    # brands = "Apple"
-    # type = "Tablet"
-    # model = "iPad Pro 13Inch M4"
     brands = session["brands"]
     type = session["type"]
     model =  "iPad Pro 11inch M4"#str(request.form["gadgetModel"])
-    gadget_search =  "ipad"
-    #gadget_search = str(request.form['txtsearch'])
-    
+
     temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands +"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    item_desc = brands +  " " + model
+    
+    summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
+    airesult = sub_AIresult(item_desc)
+    temp_df = sub_datacleaning(temp_df) 
+    nb_value = sub_NaiveBayes(temp_df, type)
+    #sub_LSTM(temp_df, type)
+    
+    return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, str_recommendation = summary_reco, str_featreco = featured_reco, str_details = detailed_reco) #kmeans_result = kmeans_value)
+
+def sub_recommendation_summary(model):
+    model = "iPad Pro 13Inch M4"
+    temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
     temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
-    temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb) 
-    str_reco = "Based on the "+ str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews"
-    str_reco = str_reco.split("\n")
-    genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    airesult = str(model.generate_content(gadget_search).text)    
     
-    lemmatizer = WordNetLemmatizer()
-    nltk.download('stopwords')
-    nltk.download('wordnet')
-    nltk.download('punkt_tab')
-    custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
-    #Remove Column Username since this column is unnecessary
-    temp_df["Reviews"] = temp_df["Reviews"].str.lower()
-    # Checking for missing values. Fill necessary and drop if reviews are null
-    if temp_df["Username"].isnull().values.any() == True:
-        temp_df["Username"] = temp_df["Username"].fillna("No Username")       
-    temp_df["Date"]
-    if temp_df["Date"].isnull().values.any() == True:
-        temp_df["Date"] = temp_df["Date"].fillna("1/1/11")
-    if temp_df["Reviews"].isnull().values.any() == True:
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
-    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
-    temp_df = temp_df.replace(r'http\S+', '', regex=True)
-    temp_df = temp_df.replace(r"x000D", '', regex=True)
-    temp_df = temp_df.replace(r'<[^>]+>', '', regex= True)
+    batt = temp_df_reco["Batt_PR"][0]
+    scr = temp_df_reco["Scr_PR"][0]
+    spd = temp_df_reco["Spd_PR"][0]
+    mem = temp_df_reco["Mem_PR"][0]
+    featured_reco = ""
+    if batt > scr and batt > spd and batt > mem:
+        featured_reco = "Battery is one of the best feature."
+        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+    elif scr > batt and scr > spd and scr > mem:
+        featured_reco = "Screen size and/or display is one of the best feature"
+        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+    elif spd > batt and spd > scr and spd > mem:
+        featured_reco = "Speed or response is one of the best feature"
+        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+    elif mem > batt and mem > scr and mem > spd:
+        featured_reco = "Memory is one of the best feature"
+        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+    else:
+        featured_reco = "Neither of the features is good or bad"
     
-    temp_df = temp_df.replace('[^a-zA-Z0-9]', ' ', regex=True)
-    temp_df = temp_df.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
-    temp_df = temp_df.replace(r" +", ' ', regex=True)
-    temp_df = temp_df.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
-    temp_df = temp_df.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
+    if batt == scr:
+        featured_reco +=  "battery and screen are one of the best feature"
+    if batt == spd:
+            featured_reco +=  "battery and speed are one of the best feature"    
+    if batt == mem:
+        featured_reco +=  "battery and memory are one of the best feature"
+    if scr == spd:
+        featured_reco +=  "screen and speed are one of the best feature"
+    if scr == mem:
+        featured_reco +=  "screen and memory are one of the best feature"
+    if spd == mem:
+        featured_reco +=  "speed and memory are one of the best feature"    
+        
+    summary_reco = "Based on the "+ str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews"
+    summary_reco = summary_reco.split("\n")
+    return summary_reco, featured_reco, sub_featured
+    
+def sub_AIresult(item_desc):
+        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        airesult = str(model.generate_content(item_desc).text)    
+        return airesult
+    
+def sub_datacleaning(temp_df):
+        lemmatizer = WordNetLemmatizer()
+        nltk.download('stopwords')
+        nltk.download('wordnet')
+        nltk.download('punkt_tab')
+        custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
+        #Remove Column Username since this column is unnecessary
+        temp_df["Reviews"] = temp_df["Reviews"].str.lower()
+        # Checking for missing values. Fill necessary and drop if reviews are null
+        if temp_df["Username"].isnull().values.any() == True:
+            temp_df["Username"] = temp_df["Username"].fillna("No Username")       
+        temp_df["Date"]
+        if temp_df["Date"].isnull().values.any() == True:
+            temp_df["Date"] = temp_df["Date"].fillna("1/1/11")
+        if temp_df["Reviews"].isnull().values.any() == True:
+            temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+        temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
+        temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
+        temp_df = temp_df.replace(r'http\S+', '', regex=True)
+        temp_df = temp_df.replace(r"x000D", '', regex=True)
+        temp_df = temp_df.replace(r'<[^>]+>', '', regex= True)
+        
+        temp_df = temp_df.replace('[^a-zA-Z0-9]', ' ', regex=True)
+        temp_df = temp_df.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
+        temp_df = temp_df.replace(r" +", ' ', regex=True)
+        temp_df = temp_df.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
+        temp_df = temp_df.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
-    def lemmatize_review(review_text):
-        words = nltk.word_tokenize(review_text)
-        lemmatize_words = [lemmatizer.lemmatize(word) for word in words]
-        lemmatize_text = ' '.join(lemmatize_words)
-        return lemmatize_text
-    temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)
-    temp_df["Reviews"].replace('', None, inplace=True)
-     
-    if temp_df["Reviews"].isnull().values.any():
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+        def lemmatize_review(review_text):
+            words = nltk.word_tokenize(review_text)
+            lemmatize_words = [lemmatizer.lemmatize(word) for word in words]
+            lemmatize_text = ' '.join(lemmatize_words)
+            return lemmatize_text
+        temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)
+        temp_df["Reviews"].replace('', None, inplace=True)
+        
+        if temp_df["Reviews"].isnull().values.any():
+            temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
 
-    #Rating of the sentiments will be converted into 3 classes
-    # 0 - Negative Rating or review, These are with rating of 1 & 2
-    # 1 - Positive Rating or review, These are with rating of 4 & 5
-    temp_df["Rating"] = temp_df["Rating"].astype(str)
-    temp_df["Rating"] = temp_df["Rating"].str.replace('[1-2]', '0', regex=True)
-    temp_df["Rating"] = temp_df["Rating"].str.replace('[4-5]', '1', regex=True)
-    # 3 - Neutral Rating or review, These are with rating of 3
-    # This rating will be drop to be dataframe since these are all neither positive or negative
-    temp_df = temp_df.drop(temp_df[temp_df["Rating"]=='3'].index, inplace=False)
+        #Rating of the sentiments will be converted into 3 classes
+        # 0 - Negative Rating or review, These are with rating of 1 & 2
+        # 1 - Positive Rating or review, These are with rating of 4 & 5
+        temp_df["Rating"] = temp_df["Rating"].astype(str)
+        temp_df["Rating"] = temp_df["Rating"].str.replace('[1-2]', '0', regex=True)
+        temp_df["Rating"] = temp_df["Rating"].str.replace('[4-5]', '1', regex=True)
+        # 3 - Neutral Rating or review, These are with rating of 3
+        # This rating will be drop to be dataframe since these are all neither positive or negative
+        temp_df = temp_df.drop(temp_df[temp_df["Rating"]=='3'].index, inplace=False)
+        return temp_df
     
     #df_kmeans = temp_df
-    #----------------------------------------------------------
-     #This portion is part of Naive Bayes, Multinomial Algorithm
-     #----------------------------------------------------------
-    vectorize = CountVectorizer()
 
-    y_val = temp_df['Rating']
-    x_val = temp_df['Reviews']
-    x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
-    x_train_count = vectorize.fit_transform(x_train.values)
-    x_train_count.toarray()
+def sub_NaiveBayes(temp_df, type):
+        
+        #----------------------------------------------------------
+        #This portion is part of Naive Bayes, Multinomial Algorithm
+        #----------------------------------------------------------
+        vectorize = CountVectorizer()
 
-    classifier = naive_bayes.MultinomialNB()
-    classifier.fit(x_train_count, y_train)
-    
-    #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
-    gadget_review_array = np.array([gadget_search])
-    gadget_review_vector = vectorize.transform(gadget_review_array)
-    nb_result = classifier.predict(gadget_review_vector)
+        y_val = temp_df['Rating']
+        x_val = temp_df['Reviews']
+        x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+        x_train_count = vectorize.fit_transform(x_train.values)
+        x_train_count.toarray()
 
-    for result in nb_result:
-        nb_value = "No value"
-        if result==0:
-            nb_value = "The sentiment is positive"
-        else:
-            nb_value = "The sentiment is positive"
+        classifier = naive_bayes.MultinomialNB()
+        classifier.fit(x_train_count, y_train)
+        
+        #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
+        gadget_review_array = np.array([type])
+        gadget_review_vector = vectorize.transform(gadget_review_array)
+        nb_result = classifier.predict(gadget_review_vector)
 
+        for result in nb_result:
+            nb_value = "No value"
+            if result==0:
+                nb_value = "The sentiment is positive"
+            else:
+                nb_value = "The sentiment is positive"
+        return nb_result
+            
+def sub_LSTM(temp_df, gadget_search):   
+#---------------------------------------
+# This portion is for LSTM algorithm
+#---------------------------------------
     embedding_size = 50
-     # cap each review to 100 words (tokens)
+    # cap each review to 100 words (tokens)
 
     SEQUENCE_LENGTH = 50
 
@@ -230,7 +286,7 @@ def modelrecommendation():
     #Need to use the resources of CPU
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device
-          
+        
     import torch.nn as nn
     class LSTMModel(nn.Module):
         def __init__(self, input_size, hidden_size, num_stacked_layers, drop_prob=0.7):
@@ -371,28 +427,41 @@ def modelrecommendation():
     plt.legend()
     plt.grid()
 
-    # df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
-    # #vectorize = TfidfVectorizer(stop_words='english')
-    # vectorize = CountVectorizer()
-    # vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
-    # k_value = 10
-    # k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-    # kmean_model = k_model.fit_transform(vectorized_value)
-    # kmean_model
-    # #df_reviews["clusters"] = k_model.labels_
-    # #df_reviews.head()
+def sub_KMeansClustter():
+    df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
+    #vectorize = TfidfVectorizer(stop_words='english')
+    vectorize = CountVectorizer()
+    vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
+    k_value = 10
+    k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
+    kmean_model = k_model.fit_transform(vectorized_value)
+    kmean_model
+    #df_reviews["clusters"] = k_model.labels_
+    #df_reviews.head()
 
-    # center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
-    # terms = vectorize.get_feature_names_out()
+    center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+    terms = vectorize.get_feature_names_out()
     
-    # kmeans_value =""
-    # for ctr in range(k_value):
-    #     kmeans_value += "Cluster %d: " % ctr
-    #     for ctr2 in center_gravity[ctr, :10]:
-    #         kmeans_value += " %s" % terms[ctr2]
+    kmeans_value =""
+    for ctr in range(k_value):
+        kmeans_value += "Cluster %d: " % ctr
+        for ctr2 in center_gravity[ctr, :10]:
+            kmeans_value += " %s" % terms[ctr2]
+    
+    #wala pa yung return
+    
 
-    
-    return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, str_recommendation = str_reco) #kmeans_result = kmeans_value)
+
+@app.route("/newdataset")
+def index():
+    return render_template("newdataset.html")
+
+
+
+
+
+
+
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
