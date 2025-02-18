@@ -9,7 +9,6 @@ import nltk #from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
@@ -113,7 +112,7 @@ def naivebayes_algo():
           return lemmatize_text
      df_reviews['Reviews'] = df_reviews['Reviews'].apply(lemmatize_review)
 
-# Last step in data cleaning! All non-character or whitespaces will be converted to None(NULL)
+     # Last step in data cleaning! All non-character or whitespaces will be converted to None(NULL)
      # and dropped from the dataframe
      df_reviews["Reviews"].replace('', None, inplace=True)
      

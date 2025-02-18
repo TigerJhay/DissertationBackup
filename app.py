@@ -1,6 +1,7 @@
 from flask import Blueprint, Flask, session, render_template, request, flash, jsonify, url_for
 import google.generativeai as genai
 import os
+from io import StringIO
 import pandas as pd 
 import numpy as np
 from numpy import array
@@ -31,12 +32,18 @@ mydb = mysql.connector.connect(
 )
 engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
 
-# dbcmd = mydb.cursor()
-# dbcmd.execute("SELECT * FROM gadget_reviews")
-# myresult = dbcmd.fetchall()
-# df_reviews = pd.read_sql("SELECT * FROM gadget_reviews", mydb)
+@app.route("/uploadCSV", methods=["GET", "POST"])
+def uploadCSV():
+    filepath = request.files["csvfile"]
+    csv_string = filepath.stream.read().decode("utf-8")
+    #print (csv_string)
+    df = pd.read_csv(StringIO(csv_string))
+    df_temp = df.head(10)
+    temp_html = df_temp.to_html()
+    #df1 = df.to_dict(orient="records")
+    df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
 
-
+    return render_template("newdataset.html", df_html = temp_html)
 
 @app.route("/")
 def home():
@@ -450,18 +457,9 @@ def sub_KMeansClustter():
     
     #wala pa yung return
     
-
-
 @app.route("/newdataset")
 def index():
     return render_template("newdataset.html")
-
-
-
-
-
-
-
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)

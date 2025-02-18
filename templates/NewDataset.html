@@ -1,8 +1,4 @@
 <!DOCTYPE html>
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
 <html>
     <head>
         <head>
@@ -15,9 +11,8 @@
             <link rel="stylesheet" href="{{ url_for('static', filename='template.css') }}">
           </head>
     </head>
-    <body>
+  <body>
         
-
   <div class="wrapper">
     <div class="sidebar">
         <div class="fs-5 text-center" style="height: 5rem;">Recommender System</div>
@@ -36,157 +31,54 @@
         <div class="col-12 bg-warning">
           <div class="card">
             <div class="row">
-              <div class="col-12 text-center align-middle fs-5"> Select your gadget below </div>
+              <div class="col-12 text-center align-middle fs-5"> Upload your CSV file below to update Dataset for better prediction and recommendation result </div>
               <div class="col-12">
                 <div class="p-2 w-25 d-inline-block">
                   <form action="brandtype" name="LoadListItems" method="POST">
-                  <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                    <option selected value="None" >Brand</option>
-                      {% for optionvalue in brands%}
-                        <option value="{{optionvalue}}">{{optionvalue}}</option>
-                      {% endfor %}
-                  </select>
-                  <div class="12">selected brand: {{selectbrand}}</div>
+                    <!-- Content -->
                 </form>
               </div>
-              <div class="p-2 w-25 d-inline-block">
-                <form action="typemodel" name="LoadListType" method="POST">
-                <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                  <option selected>Type</option>
-                    {% for optionvalue in gadgetType%}
-                    <option value="{{optionvalue}}">{{optionvalue}}</option>
-                    {% endfor %}
-                  </select>
-                  <div class="12">selected type: {{selectedtype}}</div>
-                </form>
-                </div>
-                <div class="p-2 w-25 d-inline-block">
-                  <form action="generaterecomendation" name="LoadListType" method="POST">
-                    <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
-                    <option selected>Model</option>
-                      {% for optionvalue in gadgetModel%}
-                      <option value="{{optionvalue}}">{{optionvalue}}</option>
-                      {% endfor %}
-                    </select>
-                    <div class="12">selected type: {{selectedmodel}}</div>
-                </form>
-                </div>
-              
               </div>
             </div>
-        </div>
+          </div>
         </div>
         <!-- End Search Bar -->
-
-        <div class="col-12">
-          <div class=" card">
-            <span class="card-body">
-              This system will give a recommendation of your choosen gadget with the help of generative AI</span>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="card">Extra Panel for other objects</div>
-        </div>
-        <div class="col-3">
+        <div class="col-6">
           <div class="card">
-            <div class="card-header"><h6>Review summary</h6></div>
+            <div class="card-header"><h6>Choose File to upload ".csv" file only. Please use proper formatting.</h6></div>
               <div class="card-body col"> 
-                <h6 class="card-title">Based on reviews of users and buyers</h6>
-                  <p class="card-text">
-                    {% for str_recommendation in str_recommendation %}
-                      {{str_recommendation}} <br>
-                    {% endfor %}
-                    {% for message in get_flashed_messages() %}
-                      {{message}}
-                    {% endfor %}
-                  </p>
-              </div>
+                <h6 class="card-title"> <b> </b></h6>
+                <div class="input-group mb-3">
+                  <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
+                    <input type="file" class="form-control" id="inputGroupFile02" name="csvfile">
+                    <!-- <label class="input-group-text" for="inputGroupFile02">Upload</label> -->
+                    <input type="button" class="input-group-text" for="inputGroupFile02" value= "Upload" onclick="this.form.submit()">
+                  </form>
+                </div>
           </div>   
         </div>
-        <div class="col-5">
+        </div>
+        <div class="col-6">
           <div class="card">
-            <div class="card-header"><h6>Recommendation based on the gathered reviews of different users and buyers</h6></div>
+            <div class="card-header"><h6>CSV file Format</h6></div>
               <div class="card-body col"> 
-                <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
-                  <p class="card-text">              
-                      {{str_details}}                
-                  </p>
-              </div>
+                <h6 class="card-title"> <b> </b></h6>
+                <div class="mb-3">
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Et, quod? Molestiae voluptates dolor laboriosam ipsam nesciunt, numquam excepturi vero architecto saepe deserunt, soluta voluptate quisquam. Voluptatibus dolore laborum fugit architecto.
+                </div>
           </div>   
         </div>
-        <div class="col-4">
-          <div class="card">
-              <div class="card-header">Trending words and keywords</div>
-              <div class="card-body"> 
-                  <h6 class="card-title">Details:</h6>
-                  <p class="card-text">
-                    {{kmeans_result}}
-                    Lorem ipsum dolor sit, amet consectetur adipisicing elit. Ut, sit animi, illo beatae officiis quia possimus aut velit nisi dolor in excepturi eaque, consequatur repellat voluptate voluptatum ad dolores deleniti.
-                  </p>
-              </div>
-          </div>
         </div>
-
         <div class="col-12">
           <div class="card">
-            <div class="card-body">
-                <h6 class="card-title">Generated information assisted via A.I</h6>
-                <p class="card-text">
-                  {{ai_result}}
-                  <!-- Some quick example text to build on the card title and make up the bulk of the card's content.
-                  Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dolore nam consequatur et! In, iste. Quae repudiandae velit sit odio. Magnam officia reprehenderit et ex inventore eius cupiditate vitae aperiam quos! -->
-                </p>
-            </div>                        
-          </div>
+            <div class="card-header"><h6>CSV file Format</h6></div>
+              <div class="card-body col"> 
+                <h6 class="card-title"> <b> </b></h6>
+                <div class="mb-3">
+                  {{df_html | safe}}
+                </div>
+          </div>   
         </div>
-
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header">LSTM Prediction Train</div>
-            <div class="card-body"> 
-              {% block content %}
-                <image src="{{ url_for('static', filename='/HTML/images/lstm_train_acc.png')}}" class="border border-3">
-
-                <h6 class="card-title">Details:</h6>
-                <p class="card-text">
-                  Lorem ipsum dolor sit, amet consectetur adipisicing elit. Ut, sit animi, illo beatae officiis quia possimus aut velit nisi dolor in excepturi eaque, consequatur repellat voluptate voluptatum ad dolores deleniti.
-                </p>
-            </div>    
-          </div>
         </div>
-
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header">LSTM Prediction Test</div>
-            <div class="card-body">
-
-                <image src="{{ url_for('static', filename='/HTML/images/lstm_test_acc.png')}}" class="border border-3">
-              {% endblock%}
-                <h6 class="card-title">LSTM Prediction Test</h6>
-                <p class="card-text">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Aperiam, ea temporibus? Molestias cupiditate distinctio provident dolorum officiis deleniti rerum soluta porro. Ducimus incidunt in minus itaque temporibus. Similique, praesentium suscipit.
-                </p>
-            </div>
-          </div>  
-      </div>
-      </div>
-    </div>
-</div>
-
-
-<div id="stringresult" class="fs-6">Testing div
-{% with errors = get_flashed_messages(category_filter=["**"]) %}
-{% if errors %}
-<div class="alert-message block-message error">
-  <a class="close" href="#">×</a>
-  <ul>
-    {%- for msg in errors %}
-    <li>{{ msg }}</li>
-    {% endfor -%}
-  </ul>
-</div>
-{% endif %}
-{% endwith %}
-</div>
     </body>
 </html>
