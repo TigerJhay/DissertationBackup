@@ -42,7 +42,6 @@ def uploadCSV():
     temp_html = df_temp.to_html()
     #df1 = df.to_dict(orient="records")
     df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
-
     return render_template("newdataset.html", df_html = temp_html)
 
 @app.route("/")
@@ -78,13 +77,13 @@ def modelrecommendation():
     type = session["type"]
     model =  "iPad Pro 11inch M4"#str(request.form["gadgetModel"])
 
-    temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands +"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
     item_desc = brands +  " " + model
     
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
     temp_df = sub_datacleaning(temp_df) 
-    nb_value = sub_NaiveBayes(temp_df, type)
+    #nb_value = sub_NaiveBayes(temp_df, type)
     #sub_LSTM(temp_df, type)
     
     return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, str_recommendation = summary_reco, str_featreco = featured_reco, str_details = detailed_reco) #kmeans_result = kmeans_value)
@@ -198,7 +197,7 @@ def sub_NaiveBayes(temp_df, type):
 
         y_val = temp_df['Rating']
         x_val = temp_df['Reviews']
-        x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2, random_state=0)
+        x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2)
         x_train_count = vectorize.fit_transform(x_train.values)
         x_train_count.toarray()
 
@@ -223,12 +222,8 @@ def sub_LSTM(temp_df, gadget_search):
 # This portion is for LSTM algorithm
 #---------------------------------------
     embedding_size = 50
-    # cap each review to 100 words (tokens)
-
     SEQUENCE_LENGTH = 50
-
     batch_size = 100
-    #int(input("Enter value for batch size: "))
     epochs = 10
 
     #Tokenize all words in the dataframe
@@ -238,16 +233,13 @@ def sub_LSTM(temp_df, gadget_search):
     df_train['Rating'].value_counts()
     df_test['Rating'].value_counts()
 
-    from gensim.models import Word2Vec
-
     all_reviews = df_train['Reviews'].tolist()
     all_reviews.extend(df_test['Reviews'].tolist())
-    #all_reviews
 
+    from gensim.models import Word2Vec
     wordvector_model = Word2Vec(all_reviews, vector_size=50)
-
     #wv['_____'] the value inside wv is the value needed for prediction
-    wordvector_model.wv[gadget_search]
+    wordvector_model.wvwv[gadget_search]
     wordvector_model.wv.most_similar(gadget_search, topn=3)
 
     import torch
@@ -434,7 +426,8 @@ def sub_LSTM(temp_df, gadget_search):
     plt.legend()
     plt.grid()
 
-def sub_KMeansClustter():
+def sub_KMeansClustter(temp_df):
+    df_kmeans = temp_df
     df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
     #vectorize = TfidfVectorizer(stop_words='english')
     vectorize = CountVectorizer()

@@ -48,13 +48,13 @@
             <div class="card-header"><h6>Choose File to upload ".csv" file only. Please use proper formatting.</h6></div>
               <div class="card-body col"> 
                 <h6 class="card-title"> <b> </b></h6>
-                <div class="input-group mb-3">
-                  <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
-                    <input type="file" class="form-control" id="inputGroupFile02" name="csvfile">
-                    <!-- <label class="input-group-text" for="inputGroupFile02">Upload</label> -->
-                    <input type="button" class="input-group-text" for="inputGroupFile02" value= "Upload" onclick="this.form.submit()">
-                  </form>
-                </div>
+                <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
+                  <div class="input-group mb-3">
+                    <input type="file" class="form-control" name="csvfile">
+                    <!-- <label class="input-group-text" value= "Upload" onclick="this.form.submit()">Upload</label> -->
+                    <input type="button" class="input-group-text d-inline" value= "Upload" onclick="this.form.submit()">
+                  </div>
+                </form>
           </div>   
         </div>
         </div>
@@ -62,7 +62,7 @@
           <div class="card">
             <div class="card-header"><h6>CSV file Format</h6></div>
               <div class="card-body col"> 
-                <h6 class="card-title"> <b> </b></h6>
+                <h6 class="card-title"> <b> Note and Instruction  </b></h6>
                 <div class="mb-3">
                   Lorem ipsum dolor sit amet consectetur adipisicing elit. Et, quod? Molestiae voluptates dolor laboriosam ipsam nesciunt, numquam excepturi vero architecto saepe deserunt, soluta voluptate quisquam. Voluptatibus dolore laborum fugit architecto.
                 </div>
