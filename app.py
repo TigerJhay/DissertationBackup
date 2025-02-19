@@ -31,7 +31,8 @@ mydb = mysql.connector.connect(
   database="dbmain_dissertation"
 )
 engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
-
+    
+  
 @app.route("/uploadCSV", methods=["GET", "POST"])
 def uploadCSV():
     filepath = request.files["csvfile"]
@@ -48,7 +49,6 @@ def uploadCSV():
 def home():
     temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
     brands = temp_df["Brand"].drop_duplicates()
-    #session["brand"] = "brands"
     return render_template("index.html", brands = brands.to_numpy())
 
 @app.route("/brandtype", methods=["GET", "POST"])
@@ -73,23 +73,32 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    brands = session["brands"]
-    type = session["type"]
-    model =  "iPad Pro 11inch M4"#str(request.form["gadgetModel"])
 
-    temp_df = pd.read_sql("SELECT Username, Date, Reviews, Rating FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    brands = "Samsung"
+    type = "Cellphone"
+    model = "Galaxy S24+"
+    # brands = session["brands"]
+    # type = session["type"]
+    # model = str(request.form["gadgetModel"])
     item_desc = brands +  " " + model
     
-    summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
-    airesult = sub_AIresult(item_desc)
-    temp_df = sub_datacleaning(temp_df) 
-    #nb_value = sub_NaiveBayes(temp_df, type)
-    #sub_LSTM(temp_df, type)
+    temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    temp_df = sub_datacleaning(temp_df)
+
+    attrib_table(temp_df)
     
-    return render_template("index.html", ai_result = airesult, nb_sentiment=nb_value, str_recommendation = summary_reco, str_featreco = featured_reco, str_details = detailed_reco) #kmeans_result = kmeans_value)
+    
+    summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
+
+    airesult = sub_AIresult(item_desc)
+    sub_LSTM(temp_df)
+    
+    return render_template("index.html", ai_result = airesult, str_recommendation = summary_reco, str_featreco = featured_reco, str_details = detailed_reco) #kmeans_result = kmeans_value)
 
 def sub_recommendation_summary(model):
-    model = "iPad Pro 13Inch M4"
+    mydb.close()
+    mydb._open_connection()
+    model = "Galaxy S24+"
     temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
     temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
     
@@ -185,8 +194,65 @@ def sub_datacleaning(temp_df):
         # This rating will be drop to be dataframe since these are all neither positive or negative
         temp_df = temp_df.drop(temp_df[temp_df["Rating"]=='3'].index, inplace=False)
         return temp_df
+
+def attrib_table(temp_df_attrib):
     
-    #df_kmeans = temp_df
+    #--------------------------------------------------------------------------------------------
+    #Extracting phrases for creating corpora that will be use in decision tree recommendation
+    #--------------------------------------------------------------------------------------------
+
+    df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
+    df = pd.DataFrame()
+    def extract_attrib(attrib_value):
+        df_temp = df_reviews.loc[df_reviews["Reviews"].str.contains(attrib_value, regex=False)]
+        df_temp["Reviews"] = df_temp["Reviews"].str.replace('[0-9]', "", regex=True)
+        
+        if attrib_value == "battery":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}battery\b(?:\W+\w+){0,2})')
+        elif attrib_value == "speed":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}speed\b(?:\W+\w+){0,2})')
+        elif attrib_value == "memory":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}memory\b(?:\W+\w+){0,2})')
+        elif attrib_value == "screen":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}screen\b(?:\W+\w+){0,2})')
+        else:
+            df_temp["Attribute"] = attrib_value
+        df_temp = df_temp.dropna(axis=0, subset=["Reviews"], how='any')
+        df_temp = df_temp.drop_duplicates(subset="Reviews")
+        df_temp["Attribute"] = attrib_value
+        return df_temp
+
+    list_attrib = ["battery", "screen", "speed", "memory"]
+    for attrib in list_attrib:
+        df = pd.concat([df, extract_attrib(attrib)])
+
+    attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR"])
+    gadget_list = distinct_value = df_reviews["Model"].unique()
+
+    def convert_to_matrix(gadget_model):
+        df_model = df.loc[df["Model"].str.contains(gadget_model)]
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("battery")]
+        batt_rpos = df_rev["Rating"].value_counts().get("1",0)
+        batt_rneg = df_rev["Rating"].value_counts().get("0",0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("screen")]
+        scr_rpos = df_rev["Rating"].value_counts().get("1",0)
+        scr_rneg = df_rev["Rating"].value_counts().get("0",0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("speed")]
+        spd_rpos = df_rev["Rating"].value_counts().get("1",0)
+        spd_rneg = df_rev["Rating"].value_counts().get("0",0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("memory")]
+        mem_rpos = df_rev["Rating"].value_counts().get("1",0)
+        mem_rneg = df_rev["Rating"].value_counts().get("0",0)
+
+        row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg]
+        return row_value
+
+    for colname in gadget_list:
+        attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
+    attrib_matrix.to_sql(con=engine, name="attribute_table", if_exists='replace', index=False)
 
 def sub_NaiveBayes(temp_df, type):
         
@@ -217,7 +283,8 @@ def sub_NaiveBayes(temp_df, type):
                 nb_value = "The sentiment is positive"
         return nb_result
             
-def sub_LSTM(temp_df, gadget_search):   
+def sub_LSTM(temp_df):   
+
 #---------------------------------------
 # This portion is for LSTM algorithm
 #---------------------------------------
@@ -239,9 +306,9 @@ def sub_LSTM(temp_df, gadget_search):
     from gensim.models import Word2Vec
     wordvector_model = Word2Vec(all_reviews, vector_size=50)
     #wv['_____'] the value inside wv is the value needed for prediction
-    wordvector_model.wvwv[gadget_search]
-    wordvector_model.wv.most_similar(gadget_search, topn=3)
-
+    #wordvector_model.wv[gadget_search]
+    #value = wordvector_model.wv.most_similar(gadget_search, topn=3)
+    #print (value)
     import torch
     from torch.utils.data import DataLoader, TensorDataset
 
