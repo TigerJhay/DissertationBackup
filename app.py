@@ -31,8 +31,7 @@ mydb = mysql.connector.connect(
   database="dbmain_dissertation"
 )
 engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
-    
-  
+
 @app.route("/uploadCSV", methods=["GET", "POST"])
 def uploadCSV():
     filepath = request.files["csvfile"]
@@ -74,20 +73,19 @@ def modelcomplete():
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
 
-    brands = "Samsung"
-    type = "Cellphone"
-    model = "Galaxy S24+"
-    # brands = session["brands"]
-    # type = session["type"]
-    # model = str(request.form["gadgetModel"])
+    # brands = "Samsung"
+    # type = "Cellphone"
+    # model = "Galaxy S24+"
+    brands = session["brands"]
+    type = session["type"]
+    model = str(request.form["gadgetModel"])
     item_desc = brands +  " " + model
     
     temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
     temp_df = sub_datacleaning(temp_df)
 
     attrib_table(temp_df)
-    
-    
+
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
 
     airesult = sub_AIresult(item_desc)
@@ -98,7 +96,7 @@ def modelrecommendation():
 def sub_recommendation_summary(model):
     mydb.close()
     mydb._open_connection()
-    model = "Galaxy S24+"
+    # model = "Galaxy S24+"
     temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
     temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
     
@@ -163,15 +161,15 @@ def sub_datacleaning(temp_df):
             temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
         temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
         temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
-        temp_df = temp_df.replace(r'http\S+', '', regex=True)
-        temp_df = temp_df.replace(r"x000D", '', regex=True)
-        temp_df = temp_df.replace(r'<[^>]+>', '', regex= True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r"x000D", '', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)
         
-        temp_df = temp_df.replace('[^a-zA-Z0-9]', ' ', regex=True)
-        temp_df = temp_df.replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
-        temp_df = temp_df.replace(r" +", ' ', regex=True)
-        temp_df = temp_df.replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
-        temp_df = temp_df.replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
+        temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
         def lemmatize_review(review_text):
             words = nltk.word_tokenize(review_text)
