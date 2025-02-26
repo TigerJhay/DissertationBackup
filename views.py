@@ -410,9 +410,6 @@ def naivebayes_algo():
 
 
 
-
-
-
 # ---------------------------------------------------------------------------
 # Next VIEW for AI
 # This view is for generation of Information and data using GPT or Gemini AI

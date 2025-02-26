@@ -2,6 +2,7 @@ from flask import Blueprint, Flask, session, render_template, request, flash, js
 import google.generativeai as genai
 import os
 from io import StringIO
+import openai.version
 import pandas as pd 
 import numpy as np
 from numpy import array
@@ -21,6 +22,8 @@ from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 import mysql.connector
 from sqlalchemy import create_engine
+import openai
+
 
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
@@ -83,15 +86,25 @@ def modelrecommendation():
     
     temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
     temp_df = sub_datacleaning(temp_df)
-
+    
     attrib_table(temp_df)
-
+    
+    cluster_words = sub_KMeans(temp_df)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
-
     airesult = sub_AIresult(item_desc)
+    #dev_images = sub_OpenAI(item_desc)
+    shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
     sub_LSTM(temp_df)
     
-    return render_template("index.html", ai_result = airesult, str_recommendation = summary_reco, str_featreco = featured_reco, str_details = detailed_reco) #kmeans_result = kmeans_value)
+    return render_template("index.html",
+                           cluster_words = cluster_words,
+                           shop_loc_list = shop_loc_list,
+                           #dev_images = dev_images,
+                           ai_result = airesult,
+                           str_recommendation = summary_reco,
+                           str_featreco = featured_reco,
+                           str_details = detailed_reco,
+                           )
 
 def sub_recommendation_summary(model):
     mydb.close()
@@ -107,23 +120,23 @@ def sub_recommendation_summary(model):
     featured_reco = ""
     if batt > scr and batt > spd and batt > mem:
         featured_reco = "Battery is one of the best feature."
-        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+        sub_featured = "In Progress"
     elif scr > batt and scr > spd and scr > mem:
-        featured_reco = "Screen size and/or display is one of the best feature"
-        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+        featured_reco = "Screen size and/or dsplay is one of the best feature"
+        sub_featured =  "In Progress"
     elif spd > batt and spd > scr and spd > mem:
         featured_reco = "Speed or response is one of the best feature"
-        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+        sub_featured =  "In Progress"
     elif mem > batt and mem > scr and mem > spd:
         featured_reco = "Memory is one of the best feature"
-        sub_featured = "If you main concern is battery life span, this device is recommended. Best use for gaming, watching movies and long internet connectivity and other application for image/video rendering"
+        sub_featured = "In Progress"
     else:
         featured_reco = "Neither of the features is good or bad"
     
     if batt == scr:
         featured_reco +=  "battery and screen are one of the best feature"
     if batt == spd:
-            featured_reco +=  "battery and speed are one of the best feature"    
+        featured_reco +=  "battery and speed are one of the best feature"    
     if batt == mem:
         featured_reco +=  "battery and memory are one of the best feature"
     if scr == spd:
@@ -142,7 +155,25 @@ def sub_AIresult(item_desc):
         model = genai.GenerativeModel("gemini-1.5-flash")
         airesult = str(model.generate_content(item_desc).text)    
         return airesult
+
+def sub_AIresult_Shop_Loc(item_desc):
+        item_desc = "Apple iphone 15"
+        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        shoploc_list = str(model.generate_content( "shops to buy " + item_desc + " in the philippines").text)    
+        shoploc_list = shoploc_list.split("**")
+        
+        return shoploc_list
     
+def sub_OpenAI(item_desc):
+    openai.api_key = "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"
+    image_string = "pictures of " + item_desc
+
+    response = openai.Image.create(prompt=image_string, n=1, size= "256x256")
+    image_url = response["data"][0]["url"]
+    #print(image_url)
+    return image_url
+        
 def sub_datacleaning(temp_df):
         lemmatizer = WordNetLemmatizer()
         nltk.download('stopwords')
@@ -491,29 +522,27 @@ def sub_LSTM(temp_df):
     plt.legend()
     plt.grid()
 
-def sub_KMeansClustter(temp_df):
+def sub_KMeans(temp_df):
+    
     df_kmeans = temp_df
-    df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
+    #df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
     #vectorize = TfidfVectorizer(stop_words='english')
     vectorize = CountVectorizer()
     vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
-    k_value = 10
+    k_value = 5
     k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-    kmean_model = k_model.fit_transform(vectorized_value)
-    kmean_model
-    #df_reviews["clusters"] = k_model.labels_
-    #df_reviews.head()
-
-    center_gravity = k_model.cluster_centers_.argsort()[:,::-1]
+    k_model.fit(vectorized_value)
+    
+    centroids = k_model.cluster_centers_.argsort()[:,::-1]
     terms = vectorize.get_feature_names_out()
     
     kmeans_value =""
     for ctr in range(k_value):
         kmeans_value += "Cluster %d: " % ctr
-        for ctr2 in center_gravity[ctr, :10]:
+        for ctr2 in centroids[ctr, :5]:
             kmeans_value += " %s" % terms[ctr2]
-    
-    #wala pa yung return
+
+    return kmeans_value
     
 @app.route("/newdataset")
 def index():

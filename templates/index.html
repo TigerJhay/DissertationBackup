@@ -83,7 +83,12 @@
             </div>
           </div>
           <div class="col-12">
-            <div class="card">Extra Panel for other objects</div>
+            <div class="card">Extra Panel for other objects
+                <div class="card-body col"> 
+                  <h6 class="card-title">Actual Product Image/s of your selected device. (image generated via openai)</h6>
+                    <img src = {{dev_images}} class="card-card-img-bottom img-fluid">    
+                </div>
+            </div>
           </div>
           <div class="col-3">
             <div class="card">
@@ -114,12 +119,12 @@
           </div>
           <div class="col-4">
             <div class="card">
-                <div class="card-header">Trending words and keywords</div>
+                <div class="card-header">Shops to buy this device</div>
                 <div class="card-body"> 
-                    <h6 class="card-title">Details:</h6>
+                    <h6 class="card-title">Shops:</h6>
                     <p class="card-text">
-                      {{kmeans_result}}
-                      Lorem ipsum dolor sit, amet consectetur adipisicing elit. Ut, sit animi, illo beatae officiis quia possimus aut velit nisi dolor in excepturi eaque, consequatur repellat voluptate voluptatum ad dolores deleniti.
+                      {{shop_loc_list}}
+                    
                     </p>
                 </div>
             </div>

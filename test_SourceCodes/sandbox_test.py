@@ -140,3 +140,15 @@ for colname in gadget_list:
 
 attrib_matrix.to_sql(con=engine, name="attribute_table", if_exists='replace', index=False)
 engine.dispose()
+
+import openai
+openai.api_key = "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"
+response = openai.Image.create(
+    prompt="image of dog flying",
+    n=1,
+    size="256x256"
+)
+image_url = response['data'][0]['url']
+print(image_url)
+
+
