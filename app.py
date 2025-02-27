@@ -2,7 +2,6 @@ from flask import Blueprint, Flask, session, render_template, request, flash, js
 import google.generativeai as genai
 import os
 from io import StringIO
-import openai.version
 import pandas as pd 
 import numpy as np
 from numpy import array
@@ -151,18 +150,24 @@ def sub_recommendation_summary(model):
     return summary_reco, featured_reco, sub_featured
     
 def sub_AIresult(item_desc):
-        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        airesult = str(model.generate_content(item_desc).text)    
-        return airesult
-
-def sub_AIresult_Shop_Loc(item_desc):
         item_desc = "Apple iphone 15"
         genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
         model = genai.GenerativeModel("gemini-1.5-flash")
-        shoploc_list = str(model.generate_content( "shops to buy " + item_desc + " in the philippines").text)    
+        airesult = str(model.generate_content("specifications of " + item_desc).text)
+        airesult = airesult.replace("\n","")
+        airesult = airesult.replace("**","<br>")
+        airesult = airesult.replace("*","")
+        airesult
+        return airesult
+
+def sub_AIresult_Shop_Loc(item_desc):
+        #item_desc = "Apple iphone 15"
+        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
         shoploc_list = shoploc_list.split("**")
-        
+        shoploc_list = [strvalue.replace("\n","") for strvalue in shoploc_list]
+        shoploc_list = [strvalue.replace("*","<br>") for strvalue in shoploc_list]
         return shoploc_list
     
 def sub_OpenAI(item_desc):

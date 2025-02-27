@@ -120,10 +120,12 @@
           <div class="col-4">
             <div class="card">
                 <div class="card-header">Shops to buy this device</div>
-                <div class="card-body"> 
+                <div class="card-body overflow-auto" style="height: 300px;"> 
                     <h6 class="card-title">Shops:</h6>
-                    <p class="card-text">
-                      {{shop_loc_list}}
+                    <p class="card-text ">
+                      {%for shop_loc in shop_loc_list %}
+                      {{shop_loc | safe}} <br>
+                      {% endfor %}
                     
                     </p>
                 </div>
@@ -132,10 +134,11 @@
 
           <div class="col-12">
             <div class="card">
-              <div class="card-body">
-                  <h6 class="card-title">Generated information assisted via A.I</h6>
+              <div class="card-header">Generated information assisted via A.I</div>
+              <div class="card-body overflow-auto" style="height: 400px;">
+                  <h6 class="card-title"></h6>
                   <p class="card-text">
-                    {{ai_result}}
+                    {{ai_result | safe}}
                     <!-- Some quick example text to build on the card title and make up the bulk of the card's content.
                     Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dolore nam consequatur et! In, iste. Quae repudiandae velit sit odio. Magnam officia reprehenderit et ex inventore eius cupiditate vitae aperiam quos! -->
                   </p>
