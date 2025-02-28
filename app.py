@@ -64,7 +64,6 @@ def typemodel():
     session["type"]= str(request.form["gadgetType"])
     temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"'", mydb)
     gadgetModel = temp_df["Model"].drop_duplicates()
-#  session["model"] = gadgetModel
     return render_template("index.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["type"], selectbrand= session["brands"])
 
 @app.route("/modelcomplete", methods=["GET", "POST"])
@@ -81,13 +80,13 @@ def modelrecommendation():
     brands = session["brands"]
     type = session["type"]
     model = str(request.form["gadgetModel"])
+    complete_gadget = brands + " " + type + " " + model
     item_desc = brands +  " " + model
     
     temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
     temp_df = sub_datacleaning(temp_df)
     
     attrib_table(temp_df)
-    
     cluster_words = sub_KMeans(temp_df)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
@@ -103,6 +102,7 @@ def modelrecommendation():
                            str_recommendation = summary_reco,
                            str_featreco = featured_reco,
                            str_details = detailed_reco,
+                           complete_gadget = complete_gadget
                            )
 
 def sub_recommendation_summary(model):
@@ -150,7 +150,7 @@ def sub_recommendation_summary(model):
     return summary_reco, featured_reco, sub_featured
     
 def sub_AIresult(item_desc):
-        item_desc = "Apple iphone 15"
+        #item_desc = "Apple iphone 15"
         genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
         model = genai.GenerativeModel("gemini-1.5-flash")
         airesult = str(model.generate_content("specifications of " + item_desc).text)
@@ -544,7 +544,7 @@ def sub_KMeans(temp_df):
     kmeans_value =""
     for ctr in range(k_value):
         kmeans_value += "Cluster %d: " % ctr
-        for ctr2 in centroids[ctr, :5]:
+        for ctr2 in centroids[ctr, :3]:
             kmeans_value += " %s" % terms[ctr2]
 
     return kmeans_value

@@ -36,6 +36,7 @@
               <div class="row">
                 <div class="col-12 text-center align-middle fs-5"> Select your gadget below </div>
                 <div class="col-12">
+                  <!-- Select Brand -->
                   <div class="p-2 w-25 d-inline-block">
                     <form action="brandtype" name="LoadListItems" method="POST">
                     <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
@@ -47,6 +48,8 @@
                     <div class="12">selected brand: {{selectbrand}}</div>
                   </form>
                 </div>
+                <!-- End Select Brand -->
+                <!-- Select Type -->
                 <div class="p-2 w-25 d-inline-block">
                   <form action="typemodel" name="LoadListType" method="POST">
                   <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
@@ -57,7 +60,9 @@
                     </select>
                     <div class="12">selected type: {{selectedtype}}</div>
                   </form>
-                  </div>
+                </div>
+                <!-- End Select Type -->
+                <!-- Select Model -->
                   <div class="p-2 w-25 d-inline-block">
                     <form action="generaterecomendation" name="LoadListType" method="POST">
                       <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
@@ -68,11 +73,12 @@
                       </select>
                       <div class="12">selected type: {{selectedmodel}}</div>
                   </form>
-                  </div>
-                
+                </div>
+                <!-- End Select Model -->
+                <div>Selected Model: {{complete_gadget}} </div>
                 </div>
               </div>
-          </div>
+            </div>
           </div>
           <!-- End Search Bar -->
 
