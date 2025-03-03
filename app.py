@@ -213,12 +213,13 @@ def sub_AIresult_Shop_Loc(item_desc):
         return shoploc_list
     
 def sub_OpenAI(model, type, brand):
-    brand = "Samsung" 
-    type = "Cellphone"
-    model = "Galaxy S24+"
+    # brand = "Samsung" 
+    # type = "Cellphone"
+    # model = "Galaxy S24+"
     cursor = mydb.cursor()
     cursor.execute("SELECT Path FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
+    cursor.close()
     # img_result[0]
     # for x in img_result:
     #     print(x)
