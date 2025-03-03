@@ -21,6 +21,7 @@ from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 import mysql.connector
 from sqlalchemy import create_engine
+import sqlalchemy as sqlalch
 import openai
 
 
@@ -151,13 +152,19 @@ def sub_recommendation_summary(model):
     mydb.close()
     mydb._open_connection()
     # model = "Galaxy S24+"
-    temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
-    temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
+    #temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
+    #temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
+    with engine.begin() as connection:
+        temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'"), connection)
+
+    with engine.begin() as connection:
+        temp_df_reco = pd.read_sql(sqlalch.text("SELECT * FROM attribute_table where Model='"+model+"'"), connection)
     
     batt = temp_df_reco["Batt_PR"][0]
     scr = temp_df_reco["Scr_PR"][0]
     spd = temp_df_reco["Spd_PR"][0]
     mem = temp_df_reco["Mem_PR"][0]
+    aud = temp_df_reco["Aud_PR"][0]
     featured_reco = ""
     if batt > scr and batt > spd and batt > mem:
         featured_reco = "Battery is one of the best feature."
@@ -171,6 +178,9 @@ def sub_recommendation_summary(model):
     elif mem > batt and mem > scr and mem > spd:
         featured_reco = "Memory is one of the best feature"
         sub_featured = "In Progress"
+    elif mem > batt and mem > scr and mem > spd:
+        featured_reco = "Audio is one of the best feature"
+        sub_featured = "In Progress"
     else:
         featured_reco = "Neither of the features is good or bad"
     
@@ -180,16 +190,24 @@ def sub_recommendation_summary(model):
         featured_reco +=  "battery and speed are one of the best feature"    
     if batt == mem:
         featured_reco +=  "battery and memory are one of the best feature"
+    if batt == aud:
+        featured_reco +=  "battery and audio are one of the best feature"
     if scr == spd:
         featured_reco +=  "screen and speed are one of the best feature"
     if scr == mem:
         featured_reco +=  "screen and memory are one of the best feature"
+    if scr == aud:
+        featured_reco +=  "screen and audio are one of the best feature"
     if spd == mem:
         featured_reco +=  "speed and memory are one of the best feature"    
+    if spd == aud:
+        featured_reco +=  "speed and audio are one of the best feature"
+    if mem == aud:
+        featured_reco +=  "memory and audio are one of the best feature"
         
     summary_reco = "Based on the "+ str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews"
     summary_reco = summary_reco.split("\n")
-    return summary_reco, featured_reco, sub_featured
+    return summary_reco, featured_reco, sub_featured 
     
 def sub_AIresult(item_desc):
         #item_desc = "Apple iphone 15"
@@ -299,6 +317,8 @@ def attrib_table(temp_df_attrib):
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}memory\b(?:\W+\w+){0,2})')
         elif attrib_value == "screen":
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}screen\b(?:\W+\w+){0,2})')
+        elif attrib_value == "screen":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}audio\b(?:\W+\w+){0,2})')
         else:
             df_temp["Attribute"] = attrib_value
         df_temp = df_temp.dropna(axis=0, subset=["Reviews"], how='any')
@@ -306,11 +326,11 @@ def attrib_table(temp_df_attrib):
         df_temp["Attribute"] = attrib_value
         return df_temp
 
-    list_attrib = ["battery", "screen", "speed", "memory"]
+    list_attrib = ["battery", "screen", "speed", "memory", "audio"]
     for attrib in list_attrib:
         df = pd.concat([df, extract_attrib(attrib)])
 
-    attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR"])
+    attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR", "Aud_PR", "Aud_NR"])
     gadget_list = distinct_value = df_reviews["Model"].unique()
 
     def convert_to_matrix(gadget_model):
@@ -328,6 +348,10 @@ def attrib_table(temp_df_attrib):
         spd_rneg = df_rev["Rating"].value_counts().get("0",0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("memory")]
+        mem_rpos = df_rev["Rating"].value_counts().get("1",0)
+        mem_rneg = df_rev["Rating"].value_counts().get("0",0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("audio")]
         mem_rpos = df_rev["Rating"].value_counts().get("1",0)
         mem_rneg = df_rev["Rating"].value_counts().get("0",0)
 
