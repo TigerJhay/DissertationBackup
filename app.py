@@ -352,10 +352,10 @@ def attrib_table(temp_df_attrib):
         mem_rneg = df_rev["Rating"].value_counts().get("0",0)
         
         df_rev = df_model.loc[df_model["Reviews"].str.contains("audio")]
-        mem_rpos = df_rev["Rating"].value_counts().get("1",0)
-        mem_rneg = df_rev["Rating"].value_counts().get("0",0)
+        aud_rpos = df_rev["Rating"].value_counts().get("1",0)
+        aud_rneg0 = df_rev["Rating"].value_counts().get("0",0)
 
-        row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg]
+        row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg, aud_rpos, aud_rneg]    
         return row_value
 
     for colname in gadget_list:
