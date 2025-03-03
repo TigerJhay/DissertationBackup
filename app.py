@@ -38,13 +38,22 @@ engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertatio
 def uploadCSV():
     filepath = request.files["csvfile"]
     csv_string = filepath.stream.read().decode("utf-8")
+    imagepath = str(request.form["txturldisplay1"])
+    addImageURL(imagepath)
     #print (csv_string)
     df = pd.read_csv(StringIO(csv_string))
     df_temp = df.head(10)
     temp_html = df_temp.to_html()
     #df1 = df.to_dict(orient="records")
     df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
+    addImageURL(imagepath)  
     return render_template("newdataset.html", df_html = temp_html)
+
+def addImageURL(str_URL):
+    cursor = mydb.cursor()
+    sqlstring = "INSERT INTO customers (name, address) VALUES (%s)"
+    strvalue = (str_URL)
+    cursor.execute(sqlstring, strvalue)
 
 @app.route("/")
 def home():

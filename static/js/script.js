@@ -1,6 +1,5 @@
 const dropArea = document.getElementById('cust_drop-area-container');
 const imagePreview = document.getElementById('cust_image-preview');
-const urlDisplay = document.getElementById('cust_url-display');
 
 // Prevent default drag behaviors
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -41,7 +40,8 @@ function handleDrop(e) {
       // imagePreview.src = data;
       // imagePreview.style.display = 'block';
       imagePreview.style.backgroundImage =`url(${data})`
-      urlDisplay.textContent = `Image URL: ${data}`;
+      // urlDisplay.textContent = `Image URL: ${data}`;
+      upload_file_csv.txturldisplay1.value = `${data}`;
       
     } else {
       urlDisplay.textContent = 'Invalid Image URL';
