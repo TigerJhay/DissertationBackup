@@ -219,11 +219,15 @@ def sub_OpenAI(model, type, brand):
     cursor = mydb.cursor()
     cursor.execute("SELECT Path FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
+    if img_result is None:
+        fetch_img_result = "/static/HTML/images/NIA.jpg"
+    else:
+        fetch_img_result = img_result[0]
     cursor.close()
     # img_result[0]
     # for x in img_result:
     #     print(x)
-    return img_result[0]
+    return fetch_img_result
         
 def sub_datacleaning(temp_df):
         lemmatizer = WordNetLemmatizer()
@@ -371,7 +375,7 @@ def sub_LSTM(temp_df):
     embedding_size = 50
     SEQUENCE_LENGTH = 50
     batch_size = 100
-    epochs = 10
+    epochs = 20
 
     #Tokenize all words in the dataframe
     temp_df["Reviews"] = temp_df["Reviews"].apply(word_tokenize)
