@@ -48,11 +48,10 @@
                 <h6 class="card-title"> <b> </b></h6>
                 <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
                   <div class="input-group mb-3">
-                    <input type="file" class="form-control" name="csvfile">
-                    <!-- <label class="input-group-text" value= "Upload" onclick="this.form.submit()">Upload</label> -->
-                    <input type="button" class="input-group-text d-inline" value= "Upload" onclick="this.form.submit()">
+                    <input type="file" class="form-control" name="csvfile">              
+                      <input type="button" class="input-group-text d-inline" value= "Upload" onclick="this.form.submit()">
                   </div>
-                
+                </form>
           </div>   
         </div>
         </div>
@@ -68,18 +67,63 @@
         </div>
         </div>
         <div class="col-12">
-          <div class="card">
-            <div class="card-header"><h6>Image Upload</h6></div>
-              <div class="card-body col"> 
-                <div class="cust_uploadfile" id="cust_drop-area-container">
-                  <label for="cust_input-file" id="cust_drop-area">
-                      <div id="cust_image-preview"></div>
-                  </label>
-                </div>
-              <input type="text" id="cust_url-display" name="txturldisplay1" size="100">  
-              </form>
+         
 
-          </div>   
+        
+            <div class="card">
+              
+              <div class="card-header"><h6>Image Upload</h6></div>
+                <div class="card-body col"> 
+                 <!-- Select Brand -->
+                  <div class="p-2 w-25 d-inline-block">
+                    <form action="ndsbrandtype" name="LoadListItems" method="POST">
+                    <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                      <option selected value="None" >Brand</option>
+                        {% for optionvalue in brands%}
+                          <option value="{{optionvalue}}">{{optionvalue}}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="12">selected brand: {{selectbrand}}</div>
+                  </form>
+                </div>
+                <!-- End Select Brand -->
+                <!-- Select Type -->
+                <div class="p-2 w-25 d-inline-block">
+                  <form action="ndstypemodel" name="LoadListType" method="POST">
+                  <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                    <option selected>Type</option>
+                      {% for optionvalue in gadgetType%}
+                      <option value="{{optionvalue}}">{{optionvalue}}</option>
+                      {% endfor %}
+                    </select>
+                    <div class="12">selected type: {{selectedtype}}</div>
+                  </form>
+                </div>
+                <!-- End Select Type -->
+                <!-- Select Model -->
+                  <div class="p-2 w-25 d-inline-block">
+                    <form action="ndsmodelcomplete" name="LoadListType" method="POST">
+                      <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                      <option selected>Model</option>
+                        {% for optionvalue in gadgetModel%}
+                        <option value="{{optionvalue}}">{{optionvalue}}</option>
+                        {% endfor %}
+                      </select>
+                      <div class="12">selected type: {{selectedmodel}}</div>
+                  </form>
+                </div>
+                <!-- End Select Model -->
+                <form name="imgURLUpload" action="/imgURLUpload" method="POST">
+                  <div class="cust_uploadfile" id="cust_drop-area-container">
+                      <label for="cust_input-file" id="cust_drop-area">
+                          <div id="cust_image-preview"></div>
+                      </label>
+                    </div>
+                  <div>{{selectbrand}} {{selectedtype}} {{selectedmodel}}
+                  <input type="text" id="cust_url-display" name="txturldisplay1" size="100">
+                  <input type="submit" value="Upload Image and details">  
+                 </div> 
+               </form>  
         </div>
         </div>
         <div class="col-12">

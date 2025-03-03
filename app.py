@@ -38,22 +38,56 @@ engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertatio
 def uploadCSV():
     filepath = request.files["csvfile"]
     csv_string = filepath.stream.read().decode("utf-8")
-    imagepath = str(request.form["txturldisplay1"])
-    addImageURL(imagepath)
     #print (csv_string)
     df = pd.read_csv(StringIO(csv_string))
     df_temp = df.head(10)
     temp_html = df_temp.to_html()
     #df1 = df.to_dict(orient="records")
     df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
-    addImageURL(imagepath)  
     return render_template("newdataset.html", df_html = temp_html)
 
-def addImageURL(str_URL):
+@app.route("/imgURLUpload", methods=["GET", "POST"])
+def addImageURL():
+    imagepath = str(request.form["txturldisplay1"])
+    brand =  session["ndsbrands"]
+    type = session["ndstype"]
+    model = session["ndsmodel"]
     cursor = mydb.cursor()
-    sqlstring = "INSERT INTO customers (name, address) VALUES (%s)"
-    strvalue = (str_URL)
+    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path) VALUES (%s,%s,%s,%s)"
+    print (sqlstring)
+    
+    strvalue = (model, brand, type, imagepath,)
+    print (strvalue)
     cursor.execute(sqlstring, strvalue)
+    mydb.commit()
+    mydb.close()
+    notif = "Image Uploaded"
+    return render_template("newdataset.html", notif=notif)
+
+@app.route("/ndsbrandtype", methods=["GET", "POST"])
+def ndsbrandtype():
+    session["ndsbrands"]= str(request.form["gadgetBrand"])
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", mydb)
+    gadgetType = temp_df["Type"].drop_duplicates()
+    return render_template("newdataset.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["ndsbrands"])
+ 
+@app.route("/ndstypemodel", methods=["GET", "POST"])
+def ndstypemodel():
+    session["ndstype"]= str(request.form["gadgetType"])
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", mydb)
+    gadgetModel = temp_df["Model"].drop_duplicates()
+    return render_template("newdataset.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["ndstype"], selectbrand= session["ndsbrands"])
+
+@app.route("/ndsmodelcomplete", methods=["GET", "POST"])
+def ndsmodelcomplete():
+    session["ndsmodel"] = str(request.form["gadgetModel"])
+    return render_template("newdataset.html", selectedtype = session["ndstype"], selectbrand= session["ndsbrands"], selectedmodel = session["ndsmodel"])
+
+
+
+# -------------------------------------------------- 
+# For Index.html
+# --------------------------------------------------
 
 @app.route("/")
 def home():
@@ -82,7 +116,6 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-
     # brands = "Samsung"
     # type = "Cellphone"
     # model = "Galaxy S24+"
@@ -99,14 +132,14 @@ def modelrecommendation():
     cluster_words = sub_KMeans(temp_df)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
-    #dev_images = sub_OpenAI(item_desc)
+    dev_images = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
     sub_LSTM(temp_df)
     
     return render_template("index.html",
                            cluster_words = cluster_words,
                            shop_loc_list = shop_loc_list,
-                           #dev_images = dev_images,
+                           dev_images = dev_images,
                            ai_result = airesult,
                            str_recommendation = summary_reco,
                            str_featreco = featured_reco,
@@ -179,14 +212,17 @@ def sub_AIresult_Shop_Loc(item_desc):
         shoploc_list = [strvalue.replace("*","<br>") for strvalue in shoploc_list]
         return shoploc_list
     
-def sub_OpenAI(item_desc):
-    openai.api_key = "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"
-    image_string = "pictures of " + item_desc
-
-    response = openai.Image.create(prompt=image_string, n=1, size= "256x256")
-    image_url = response["data"][0]["url"]
-    #print(image_url)
-    return image_url
+def sub_OpenAI(model, type, brand):
+    brand = "Samsung" 
+    type = "Cellphone"
+    model = "Galaxy S24+"
+    cursor = mydb.cursor()
+    cursor.execute("SELECT Path FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
+    img_result = cursor.fetchone()
+    # img_result[0]
+    # for x in img_result:
+    #     print(x)
+    return img_result[0]
         
 def sub_datacleaning(temp_df):
         lemmatizer = WordNetLemmatizer()
@@ -560,7 +596,9 @@ def sub_KMeans(temp_df):
     
 @app.route("/newdataset")
 def index():
-    return render_template("newdataset.html")
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
+    brands = temp_df["Brand"].drop_duplicates()
+    return render_template("newdataset.html",brands = brands.to_numpy())
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)

@@ -41,10 +41,11 @@ function handleDrop(e) {
       // imagePreview.style.display = 'block';
       imagePreview.style.backgroundImage =`url(${data})`
       // urlDisplay.textContent = `Image URL: ${data}`;
-      upload_file_csv.txturldisplay1.value = `${data}`;
+      imgURLUpload.txturldisplay1.value = `${data}`;
       
     } else {
-      urlDisplay.textContent = 'Invalid Image URL';
+      //urlDisplay.textContent = 'Invalid Image URL';
+      imgURLUpload.txturldisplay1.value= 'Invalid Image URL'
       // imagePreview.style.display = 'none';
     }
   }
