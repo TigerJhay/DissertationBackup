@@ -24,10 +24,9 @@ from sqlalchemy import create_engine
 import sqlalchemy as sqlalch
 import openai
 
-
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
-mydb = mysql.connector.connect(
+mysqlconn = mysql.connector.connect(
   host="localhost",
   user="root",
   password="",
@@ -39,11 +38,9 @@ engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertatio
 def uploadCSV():
     filepath = request.files["csvfile"]
     csv_string = filepath.stream.read().decode("utf-8")
-    #print (csv_string)
     df = pd.read_csv(StringIO(csv_string))
     df_temp = df.head(10)
     temp_html = df_temp.to_html()
-    #df1 = df.to_dict(orient="records")
     df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
     return render_template("newdataset.html", df_html = temp_html)
 
@@ -53,26 +50,26 @@ def addImageURL():
     brand =  session["ndsbrands"]
     type = session["ndstype"]
     model = session["ndsmodel"]
-    cursor = mydb.cursor()
+    cursor = mysqlconn.cursor()
     sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path) VALUES (%s,%s,%s,%s)"    
     strvalue = (model, brand, type, imagepath,)
     cursor.execute(sqlstring, strvalue)
-    mydb.commit()
-    mydb.close()
+    mysqlconn.commit()
+    mysqlconn.close()
     notif = "Image Uploaded"
     return render_template("newdataset.html", notif=notif)
 
 @app.route("/ndsbrandtype", methods=["GET", "POST"])
 def ndsbrandtype():
     session["ndsbrands"]= str(request.form["gadgetBrand"])
-    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", mydb)
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", mysqlconn)
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("newdataset.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["ndsbrands"])
  
 @app.route("/ndstypemodel", methods=["GET", "POST"])
 def ndstypemodel():
     session["ndstype"]= str(request.form["gadgetType"])
-    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", mydb)
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", mysqlconn)
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("newdataset.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["ndstype"], selectbrand= session["ndsbrands"])
 
@@ -87,8 +84,8 @@ def ndsmodelcomplete():
 
 @app.route("/")
 def home():
-    mydb.close()
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
+    mysqlconn.reconnect()
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
     brands = temp_df["Brand"].drop_duplicates()
     return render_template("index.html", 
                            brands = brands.to_numpy(),
@@ -97,14 +94,14 @@ def home():
 @app.route("/brandtype", methods=["GET", "POST"])
 def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
-    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"'", mydb)
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"'", mysqlconn)
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("index.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["brands"])
  
 @app.route("/typemodel", methods=["GET", "POST"])
 def typemodel():
     session["type"]= str(request.form["gadgetType"])
-    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"'", mydb)
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"'", mysqlconn)
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("index.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["type"], selectbrand= session["brands"])
 
@@ -124,7 +121,7 @@ def modelrecommendation():
     complete_gadget = brands + " " + type + " " + model
     item_desc = brands +  " " + model
     
-    temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mydb)
+    temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mysqlconn)
     temp_df = sub_datacleaning(temp_df)
     
     attrib_table(temp_df)
@@ -147,11 +144,11 @@ def modelrecommendation():
                            )
 
 def sub_recommendation_summary(model):
-    mydb.close()
-    mydb._open_connection()
+    mysqlconn.close()
+    mysqlconn._open_connection()
     # model = "Galaxy S24+"
-    #temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mydb)
-    #temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mydb)
+    #temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mysqlconn)
+    #temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mysqlconn)
     with engine.begin() as connection:
         temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'"), connection)
 
@@ -234,7 +231,7 @@ def sub_OpenAI(model, type, brand):
     # brand = "Samsung" 
     # type = "Cellphone"
     # model = "Galaxy S24+"
-    cursor = mydb.cursor()
+    cursor = mysqlconn.cursor()
     cursor.execute("SELECT Path FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
     if img_result is None:
@@ -625,7 +622,7 @@ def sub_KMeans(temp_df):
     
 @app.route("/newdataset")
 def index():
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
     brands = temp_df["Brand"].drop_duplicates()
     return render_template("newdataset.html",brands = brands.to_numpy())
 
