@@ -54,11 +54,8 @@ def addImageURL():
     type = session["ndstype"]
     model = session["ndsmodel"]
     cursor = mydb.cursor()
-    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path) VALUES (%s,%s,%s,%s)"
-    print (sqlstring)
-    
+    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path) VALUES (%s,%s,%s,%s)"    
     strvalue = (model, brand, type, imagepath,)
-    print (strvalue)
     cursor.execute(sqlstring, strvalue)
     mydb.commit()
     mydb.close()
@@ -84,17 +81,18 @@ def ndsmodelcomplete():
     session["ndsmodel"] = str(request.form["gadgetModel"])
     return render_template("newdataset.html", selectedtype = session["ndstype"], selectbrand= session["ndsbrands"], selectedmodel = session["ndsmodel"])
 
-
-
 # -------------------------------------------------- 
 # For Index.html
 # --------------------------------------------------
 
 @app.route("/")
 def home():
+    mydb.close()
     temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mydb)
     brands = temp_df["Brand"].drop_duplicates()
-    return render_template("index.html", brands = brands.to_numpy())
+    return render_template("index.html", 
+                           brands = brands.to_numpy(),
+                           dev_images = "/static/images/NIA.jpg")
 
 @app.route("/brandtype", methods=["GET", "POST"])
 def brandtype():
@@ -181,31 +179,34 @@ def sub_recommendation_summary(model):
     elif mem > batt and mem > scr and mem > spd:
         featured_reco = "Audio is one of the best feature"
         sub_featured = "In Progress"
+    elif aud > batt and aud > scr > spd > mem:
+        featured_reco = "Audio is one of the best feature"
+        sub_featured = "In Progress"
     else:
         featured_reco = "Neither of the features is good or bad"
     
-    if batt == scr:
+    if batt > mem and batt > aud and batt > spd and batt == scr:
         featured_reco +=  "battery and screen are one of the best feature"
-    if batt == spd:
+    if batt > mem and batt > aud and batt > scr and batt == spd:
         featured_reco +=  "battery and speed are one of the best feature"    
-    if batt == mem:
-        featured_reco +=  "battery and memory are one of the best feature"
-    if batt == aud:
+    if batt > mem and batt > aud and batt > spd and batt == aud:
         featured_reco +=  "battery and audio are one of the best feature"
-    if scr == spd:
+    if batt > spd and batt > aud and batt > scr and batt == mem:
+        featured_reco +=  "battery and memory are one of the best feature"
+    if scr > batt and scr > mem and scr > aud and scr == spd:
         featured_reco +=  "screen and speed are one of the best feature"
-    if scr == mem:
+    if scr > batt and scr > spd and spd > aud and scr == mem:
         featured_reco +=  "screen and memory are one of the best feature"
-    if scr == aud:
+    if scr > batt and scr > spd and scr > mem and scr == aud:
         featured_reco +=  "screen and audio are one of the best feature"
-    if spd == mem:
+    if spd > batt and spd > aud and spd > scr and spd == mem:
         featured_reco +=  "speed and memory are one of the best feature"    
-    if spd == aud:
+    if spd > batt and spd > aud and spd > scr and spd == aud:
         featured_reco +=  "speed and audio are one of the best feature"
-    if mem == aud:
+    if mem > batt and mem > spd and mem > scr and mem == aud:
         featured_reco +=  "memory and audio are one of the best feature"
         
-    summary_reco = "Based on the "+ str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews"
+    summary_reco = "Based on the " + str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
     summary_reco = summary_reco.split("\n")
     return summary_reco, featured_reco, sub_featured 
     
@@ -217,7 +218,6 @@ def sub_AIresult(item_desc):
         airesult = airesult.replace("\n","")
         airesult = airesult.replace("**","<br>")
         airesult = airesult.replace("*","")
-        airesult
         return airesult
 
 def sub_AIresult_Shop_Loc(item_desc):
@@ -353,7 +353,7 @@ def attrib_table(temp_df_attrib):
         
         df_rev = df_model.loc[df_model["Reviews"].str.contains("audio")]
         aud_rpos = df_rev["Rating"].value_counts().get("1",0)
-        aud_rneg0 = df_rev["Rating"].value_counts().get("0",0)
+        aud_rneg = df_rev["Rating"].value_counts().get("0",0)
 
         row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg, aud_rpos, aud_rneg]    
         return row_value

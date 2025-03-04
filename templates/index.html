@@ -9,13 +9,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='template.css') }}">
 </head>
 <body>
-  
-  <script type="text/javascript">
-
-    
-  </script> 
-  
-
   <div class="wrapper">
       <div class="sidebar">
           <div class="fs-5 text-center" style="height: 5rem;">Recommender System</div>
@@ -31,12 +24,11 @@
                 <div class="text-center fs-1 text-warning">Recommender System</div>
           </div>
           <!-- Search Bar -->
-          <div class="col-12 bg-warning">
+          <div class="col-12">
             <div class="card">
-              <div class="row">
-                <div class="col-12 text-center align-middle fs-5"> Select your gadget below </div>
-                <div class="col-12">
-                  <!-- Select Brand -->
+                <div class="card-header"> Select your gadget below </div>
+                  <div class="card-body col">
+                    <!-- Select Brand -->
                   <div class="p-2 w-25 d-inline-block">
                     <form action="brandtype" name="LoadListItems" method="POST">
                     <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
@@ -76,30 +68,29 @@
                 </div>
                 <!-- End Select Model -->
                 <div>Selected Model: {{complete_gadget}} </div>
-                </div>
-              </div>
+                  </div>
             </div>
           </div>
           <!-- End Search Bar -->
 
-          <div class="col-12">
+          <!-- <div class="col-12">
             <div class=" card">
               <span class="card-body">
                 This system will give a recommendation of your choosen gadget with the help of generative AI</span>
             </div>
-          </div>
+          </div> -->
           <div class="col-12">
-            <div class="card">Extra Panel for other objects
+            <div class="card">
+              <div class="card-header"><h6>Actual Product Image/s of your selected device</h6></div>  
                 <div class="card-body col"> 
-                  <h6 class="card-title">Actual Product Image/s of your selected device</h6>
-                    <img src={{dev_images}} class="card-card-img-bottom img-fluid" style="width: 250px; height: 250px">    
+                  <img src={{dev_images}} class="card-card-img-bottom img-fluid" style="width: 250px; height: 250px">    
                 </div>
             </div>
           </div>
           <div class="col-3">
             <div class="card">
               <div class="card-header"><h6>Review summary</h6></div>
-                <div class="card-body col"> 
+                <div class="card-body col" style="height: 300px;"> 
                   <h6 class="card-title">Based on reviews of users and buyers</h6>
                     <p class="card-text">
                       {% for str_recommendation in str_recommendation %}
@@ -114,8 +105,8 @@
           </div>
           <div class="col-5">
             <div class="card">
-              <div class="card-header"><h6>Recommendation based on the gathered reviews of different users and buyers</h6></div>
-                <div class="card-body col"> 
+              <div class="card-header"><h6>Recommendation based on the gathered reviews of users and buyers</h6></div>
+                <div class="card-body col" style="height: 300px;"> 
                   <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
                     <p class="card-text">              
                         {{str_details}}                
@@ -132,7 +123,6 @@
                       {%for shop_loc in shop_loc_list %}
                       {{shop_loc | safe}} <br>
                       {% endfor %}
-                    
                     </p>
                 </div>
             </div>
@@ -184,21 +174,5 @@
         </div>
       </div>
   </div>
-
-
-<div id="stringresult" class="fs-6">Testing div
-  {% with errors = get_flashed_messages(category_filter=["**"]) %}
-  {% if errors %}
-  <div class="alert-message block-message error">
-    <a class="close" href="#">×</a>
-    <ul>
-      {%- for msg in errors %}
-      <li>{{ msg }}</li>
-      {% endfor -%}
-    </ul>
-  </div>
-  {% endif %}
-  {% endwith %}
-</div>
 </body>
 </html>
