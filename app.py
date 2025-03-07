@@ -36,12 +36,16 @@ engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertatio
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
 def uploadCSV():
+    #filepath = "D:\My Documents\~Dissertation Files\SystemPrototype\Datasets_temporary\Dataset smartphone no_usr_no_date"
     filepath = request.files["csvfile"]
+    print(filepath) 
     csv_string = filepath.stream.read().decode("utf-8")
     df = pd.read_csv(StringIO(csv_string))
     df_temp = df.head(10)
     temp_html = df_temp.to_html()
+    engine.connect()
     df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
+    engine.dispose()
     return render_template("newdataset.html", df_html = temp_html)
 
 @app.route("/imgURLUpload", methods=["GET", "POST"])
