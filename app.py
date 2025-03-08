@@ -21,8 +21,10 @@ from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 import mysql.connector
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import sqlalchemy as sqlalch
 import openai
+
 
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
@@ -32,20 +34,32 @@ mysqlconn = mysql.connector.connect(
   password="",
   database="dbmain_dissertation"
 )
-engine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False)
+sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', pool_recycle=1800)
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
-def uploadCSV():
-    #filepath = "D:\My Documents\~Dissertation Files\SystemPrototype\Datasets_temporary\Dataset smartphone no_usr_no_date"
+def uploadCSV2():
+
     filepath = request.files["csvfile"]
-    print(filepath) 
     csv_string = filepath.stream.read().decode("utf-8")
     df = pd.read_csv(StringIO(csv_string))
     df_temp = df.head(10)
     temp_html = df_temp.to_html()
-    engine.connect()
-    df.to_sql("gadget_reviews", con=engine, if_exists="append", index=index)
-    engine.dispose()
+    df.to_sql("gadget_reviews", con=sqlengine, if_exists="append", index=index)
+    sqlengine.dispose()
+    return render_template("newdataset.html", df_html = temp_html)
+
+def uploadCSV():
+    filepath = request.files["csvfile"]
+    csvstring = filepath.stream.read().decode("utf-8")
+    #dfcsv = pd.read_csv(StringIO(csvstring))
+    with open(csvstring, 'r') as f:
+        sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False, pool_recycle=1800).raw_connection()
+        cursor = sqlengine.cursor()
+        cmd = 'COPY gadget_reviews(username, date, reviews, rating, model, type, brand) FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
+        #cmd = 'COPY tbl_name(col1, col2, col3) FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
+        cursor.copy_expert(cmd, f)
+        sqlengine.commit()
+
     return render_template("newdataset.html", df_html = temp_html)
 
 @app.route("/imgURLUpload", methods=["GET", "POST"])
@@ -91,6 +105,7 @@ def home():
     mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
     brands = temp_df["Brand"].drop_duplicates()
+    mysqlconn.close()
     return render_template("index.html", 
                            brands = brands.to_numpy(),
                            dev_images = "/static/images/NIA.jpg")
@@ -98,14 +113,18 @@ def home():
 @app.route("/brandtype", methods=["GET", "POST"])
 def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"'", mysqlconn)
+    mysqlconn.close()
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("index.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["brands"])
  
 @app.route("/typemodel", methods=["GET", "POST"])
 def typemodel():
     session["type"]= str(request.form["gadgetType"])
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"'", mysqlconn)
+    mysqlconn.close()
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("index.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["type"], selectbrand= session["brands"])
 
@@ -153,10 +172,10 @@ def sub_recommendation_summary(model):
     # model = "Galaxy S24+"
     #temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mysqlconn)
     #temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mysqlconn)
-    with engine.begin() as connection:
+    with sqlengine.begin() as connection:
         temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'"), connection)
 
-    with engine.begin() as connection:
+    with sqlengine.begin() as connection:
         temp_df_reco = pd.read_sql(sqlalch.text("SELECT * FROM attribute_table where Model='"+model+"'"), connection)
     
     batt = temp_df_reco["Batt_PR"][0]
@@ -361,7 +380,7 @@ def attrib_table(temp_df_attrib):
 
     for colname in gadget_list:
         attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
-    attrib_matrix.to_sql(con=engine, name="attribute_table", if_exists='replace', index=False)
+    attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=False)
 
 def sub_NaiveBayes(temp_df, type):
         
@@ -626,8 +645,10 @@ def sub_KMeans(temp_df):
     
 @app.route("/newdataset")
 def index():
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
     brands = temp_df["Brand"].drop_duplicates()
+    mysqlconn.close()
     return render_template("newdataset.html",brands = brands.to_numpy())
 
 #need this line to access HTML files inside templates folder
