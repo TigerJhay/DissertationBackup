@@ -37,30 +37,19 @@ mysqlconn = mysql.connector.connect(
 sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', pool_recycle=1800)
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
-def uploadCSV2():
-
-    filepath = request.files["csvfile"]
-    csv_string = filepath.stream.read().decode("utf-8")
-    df = pd.read_csv(StringIO(csv_string))
-    df_temp = df.head(10)
-    temp_html = df_temp.to_html()
-    df.to_sql("gadget_reviews", con=sqlengine, if_exists="append", index=index)
-    sqlengine.dispose()
-    return render_template("newdataset.html", df_html = temp_html)
 
 def uploadCSV():
     filepath = request.files["csvfile"]
-    csvstring = filepath.stream.read().decode("utf-8")
-    #dfcsv = pd.read_csv(StringIO(csvstring))
-    with open(csvstring, 'r') as f:
-        sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', echo=False, pool_recycle=1800).raw_connection()
-        cursor = sqlengine.cursor()
-        cmd = 'COPY gadget_reviews(username, date, reviews, rating, model, type, brand) FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
-        #cmd = 'COPY tbl_name(col1, col2, col3) FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
-        cursor.copy_expert(cmd, f)
-        sqlengine.commit()
+    csv_string = filepath.stream.read().decode("utf-8")
+    #df = pd.read_csv(StringIO(csv_string))
+    try: 
+        for chunk in pd.read_csv(StringIO(csv_string), chunksize=2000):
+            chunk.to_sql(name="gadget_reviews", con=sqlengine, if_exists="append", index=False)
+    except Exception as e:
+        print(e)
+        print(csv_string + "value is this")
 
-    return render_template("newdataset.html", df_html = temp_html)
+    return render_template("newdataset.html")
 
 @app.route("/imgURLUpload", methods=["GET", "POST"])
 def addImageURL():
@@ -143,7 +132,7 @@ def modelrecommendation():
     model = str(request.form["gadgetModel"])
     complete_gadget = brands + " " + type + " " + model
     item_desc = brands +  " " + model
-    
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mysqlconn)
     temp_df = sub_datacleaning(temp_df)
     
@@ -204,6 +193,7 @@ def sub_recommendation_summary(model):
         sub_featured = "In Progress"
     else:
         featured_reco = "Neither of the features is good or bad"
+        sub_featured = "In Progress"
     
     if batt > mem and batt > aud and batt > spd and batt == scr:
         featured_reco +=  "battery and screen are one of the best feature"
@@ -226,7 +216,7 @@ def sub_recommendation_summary(model):
     if mem > batt and mem > spd and mem > scr and mem == aud:
         featured_reco +=  "memory and audio are one of the best feature"
         
-    summary_reco = "Based on the " + str(temp_df_count["count"][0]) +" reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
+    summary_reco = "Based on the " + str(temp_df_count["count"][0]) + " reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
     summary_reco = summary_reco.split("\n")
     return summary_reco, featured_reco, sub_featured 
     
