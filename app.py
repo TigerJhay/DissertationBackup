@@ -28,6 +28,7 @@ import openai
 
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
+
 mysqlconn = mysql.connector.connect(
   host="localhost",
   user="root",
@@ -611,25 +612,33 @@ def sub_LSTM(temp_df):
     plt.legend()
     plt.grid()
 
-def sub_KMeans(temp_df):
-    
-    df_kmeans = temp_df
-    #df_kmeans["Reviews"] = df_kmeans["Reviews"].values.astype("U")
-    #vectorize = TfidfVectorizer(stop_words='english')
-    vectorize = CountVectorizer()
-    vectorized_value = vectorize.fit_transform(df_kmeans["Reviews"])
-    k_value = 5
-    k_model = KMeans(n_clusters=k_value, init='k-means++', max_iter=100, n_init=1)
-    k_model.fit(vectorized_value)
-    
-    centroids = k_model.cluster_centers_.argsort()[:,::-1]
-    terms = vectorize.get_feature_names_out()
-    
-    kmeans_value =""
-    for ctr in range(k_value):
-        kmeans_value += "Cluster %d: " % ctr
-        for ctr2 in centroids[ctr, :3]:
-            kmeans_value += " %s" % terms[ctr2]
+def sub_KMeans(gadgettype):
+    gadgettype = "Ear buds"
+    mysqlconn.reconnect()
+    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
+    kmeans_df = kmeans_df.iloc[:10000,:]
+    kmeans_df['Rating'].value_counts().plot(kind='bar')
+    df_reco = kmeans_df[['Type', 'Brand','Model', 'Rating']]
+    pivot_table = df_reco.pivot_table(index=['Type','Brand'], columns='Model', values='Rating', fill_value=0)
+    num_clusters = 5  # Choose the number of clusters
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    cluster_labels = kmeans.fit_predict(pivot_table)
+    user_id = 1
+
+    user_cluster_label = cluster_labels[user_id - 1]
+    users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
+    average_ratings = pivot_table.loc[users_in_same_cluster].mean()
+    sorted_ratings = average_ratings.sort_values(ascending=False)
+
+    # Example: Get top-k recommendations
+    k = 3
+    top_kmeans_reco = sorted_ratings.head(k)
+
+    # Print the top-k recommendations
+    print("Top", k, "recommendations")
+    for product_id, rating in top_kmeans_reco.items():
+        top_reco = product_id
+        print("Product ID:", product_id, "Rating:", rating)
 
     return kmeans_value
     
