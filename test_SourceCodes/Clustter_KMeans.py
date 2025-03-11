@@ -8,7 +8,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 # This portion is for Cluster K-Means Algorithm
 #----------------------------------------------
 
-df = pd.read_csv("D:\TestData.csv")
+#df = pd.read_csv("D:\TestData.csv")
+df = pd.read_csv("D:\My Documents\~Dissertation Files\TestData.csv")
 df = df.iloc[:10000,:]
 df['Score'].value_counts().plot(kind='bar')
 df_reco = df[['Id', 'ProductId', 'Score']]

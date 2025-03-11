@@ -613,37 +613,32 @@ def sub_LSTM(temp_df):
     plt.grid()
 
 def sub_KMeans(gadgettype):
-
-    gadgettype = "Ear buds"
+    gadgettype = "Smartphone"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
     kmeans_df = kmeans_df.iloc[:10000,:]
-    #kmeans_df['Rating'].value_counts().plot(kind='bar')
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
-    pivot_table = pd.pivot_table(df_reco,index='Rev_No', columns='Model', values='Rating', fill_value=0)
-
-
-    num_clusters = 5  # Choose the number of clusters
+    pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
+    num_clusters = 5  # Choose the number of clusters)
+    
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
     user_id = 1
-
     user_cluster_label = cluster_labels[user_id - 1]
     users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
     average_ratings = pivot_table.loc[users_in_same_cluster].mean()
     sorted_ratings = average_ratings.sort_values(ascending=False)
 
-    # Example: Get top-k recommendations
+    # Get top(k) recommendations
     k = 3
     top_kmeans_reco = sorted_ratings.head(k)
 
     # Print the top-k recommendations
-    print("Top", k, "recommendations")
     for product_id, rating in top_kmeans_reco.items():
-        top_reco = product_id
+        #top_reco = product_id
         print("Product ID:", product_id, "Rating:", rating)
 
-    return kmeans_value
+    return top_kmeans_reco, k
     
 @app.route("/newdataset")
 def index():
