@@ -138,7 +138,7 @@ def modelrecommendation():
     temp_df = sub_datacleaning(temp_df)
     
     attrib_table(temp_df)
-    cluster_words = sub_KMeans(temp_df)
+    other_reco = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
     dev_images = sub_OpenAI(model, type, brands)
@@ -146,7 +146,7 @@ def modelrecommendation():
     sub_LSTM(temp_df)
     
     return render_template("index.html",
-                           cluster_words = cluster_words,
+                           cluster_words = other_reco,
                            shop_loc_list = shop_loc_list,
                            dev_images = dev_images,
                            ai_result = airesult,
@@ -613,13 +613,16 @@ def sub_LSTM(temp_df):
     plt.grid()
 
 def sub_KMeans(gadgettype):
+
     gadgettype = "Ear buds"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
     kmeans_df = kmeans_df.iloc[:10000,:]
-    kmeans_df['Rating'].value_counts().plot(kind='bar')
-    df_reco = kmeans_df[['Type', 'Brand','Model', 'Rating']]
-    pivot_table = df_reco.pivot_table(index=['Type','Brand'], columns='Model', values='Rating', fill_value=0)
+    #kmeans_df['Rating'].value_counts().plot(kind='bar')
+    df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
+    pivot_table = pd.pivot_table(df_reco,index='Rev_No', columns='Model', values='Rating', fill_value=0)
+
+
     num_clusters = 5  # Choose the number of clusters
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
