@@ -25,7 +25,6 @@ from sqlalchemy.orm import sessionmaker
 import sqlalchemy as sqlalch
 import openai
 
-
 views = Blueprint(__name__, "views")
 app = Flask(__name__)
 
@@ -138,7 +137,7 @@ def modelrecommendation():
     temp_df = sub_datacleaning(temp_df)
     
     attrib_table(temp_df)
-    other_reco = sub_KMeans(type)
+    top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
     dev_images = sub_OpenAI(model, type, brands)
@@ -146,14 +145,15 @@ def modelrecommendation():
     sub_LSTM(temp_df)
     
     return render_template("index.html",
-                           cluster_words = other_reco,
                            shop_loc_list = shop_loc_list,
                            dev_images = dev_images,
                            ai_result = airesult,
                            str_recommendation = summary_reco,
                            str_featreco = featured_reco,
                            str_details = detailed_reco,
-                           complete_gadget = complete_gadget
+                           complete_gadget = complete_gadget,
+                           top_reco = top_reco,
+                           k_count = k_count
                            )
 
 def sub_recommendation_summary(model):
@@ -174,48 +174,46 @@ def sub_recommendation_summary(model):
     mem = temp_df_reco["Mem_PR"][0]
     aud = temp_df_reco["Aud_PR"][0]
     featured_reco = ""
+    sub_featured = ""
     if batt > scr and batt > spd and batt > mem:
-        featured_reco = "Battery is one of the best feature."
-        sub_featured = "In Progress"
+        featured_reco += "Battery is one of the best feature."
+        sub_featured += "Essentially, a gadget's battery life is a key metric for buyers, shaping their perception of the device's practicality, ease of use, and overall desirability. A long-lasting battery is a key feature for many users, especially those who are always on the go or who use their devices for long periods of time. A long battery life is also a key selling point for many devices, as it can help differentiate a product from its competitors and attract more customers. In addition, a long battery life can help improve a device's overall user experience, as it can reduce the need for frequent charging and allow users to use their devices for longer periods of time without interruption."
     elif scr > batt and scr > spd and scr > mem:
-        featured_reco = "Screen size and/or dsplay is one of the best feature"
-        sub_featured =  "In Progress"
+        featured_reco += "Screen size and/or dsplay is one of the best feature"
+        sub_featured +=  "Larger, high-resolution screens provide a more immersive and enjoyable experience for watching videos, playing games, and browsing photos. A larger screen also makes it easier to read text and view images, which can be especially useful for users with poor eyesight or who use their devices for extended periods of time. In addition, a high-resolution screen can display more detail and provide a sharper, clearer image, which can enhance the overall viewing experience. A high-quality screen can also help improve a device's overall user experience, as it can make text and images easier to read and provide a more vibrant and engaging display."
     elif spd > batt and spd > scr and spd > mem:
-        featured_reco = "Speed or response is one of the best feature"
-        sub_featured =  "In Progress"
+        featured_reco += "Speed or response is one of the best feature"
+        sub_featured +=  "A fast processor can help improve a device's overall performance and responsiveness, making it more efficient and enjoyable to use. A fast processor can help reduce lag and improve the speed of tasks such as opening apps, browsing the web, and playing games. A fast processor can also help improve a device's multitasking capabilities, allowing users to run multiple apps simultaneously without experiencing slowdowns or performance issues. In addition, a fast processor can help improve a device's overall user experience, as it can make the device more responsive and enjoyable to use."
     elif mem > batt and mem > scr and mem > spd:
-        featured_reco = "Memory is one of the best feature"
-        sub_featured = "In Progress"
-    elif mem > batt and mem > scr and mem > spd:
-        featured_reco = "Audio is one of the best feature"
-        sub_featured = "In Progress"
-    elif aud > batt and aud > scr > spd > mem:
-        featured_reco = "Audio is one of the best feature"
-        sub_featured = "In Progress"
+        featured_reco += "Memory is one of the best feature"
+        sub_featured += "Sufficient memory, particularly RAM (Random Access Memory), allows gadgets to handle multiple tasks simultaneously without slowing down. This is essential for smooth operation when running various apps or programs. Memory is also important for storing data, such as photos, videos, and music, as well as for running the operating system and other essential software. A gadget with sufficient memory will be able to run smoothly and efficiently, providing a better user experience."
+    elif aud > batt and aud > scr and aud > spd and aud > mem:
+        featured_reco += "Audio is one of the best feature"
+        sub_featured += "High-fidelity audio transforms the experience of watching movies, listening to music, and playing games. Clear, rich sound creates a more immersive and engaging environment. High-quality audio can also enhance the overall user experience, making it more enjoyable and satisfying. In addition, high-fidelity audio can help improve a device's overall performance, as it can provide a more realistic and engaging sound experience. High-quality audio can also help differentiate a product from its competitors and attract more customers."
     else:
-        featured_reco = "Neither of the features is good or bad"
-        sub_featured = "In Progress"
+        featured_reco += "Neither of the features is good or bad"
+        sub_featured += "Over all, the gadget is neither good nor bad. It is just an average gadget."
     
-    if batt > mem and batt > aud and batt > spd and batt == scr:
-        featured_reco +=  "battery and screen are one of the best feature"
-    if batt > mem and batt > aud and batt > scr and batt == spd:
-        featured_reco +=  "battery and speed are one of the best feature"    
-    if batt > mem and batt > aud and batt > spd and batt == aud:
-        featured_reco +=  "battery and audio are one of the best feature"
-    if batt > spd and batt > aud and batt > scr and batt == mem:
-        featured_reco +=  "battery and memory are one of the best feature"
-    if scr > batt and scr > mem and scr > aud and scr == spd:
-        featured_reco +=  "screen and speed are one of the best feature"
-    if scr > batt and scr > spd and spd > aud and scr == mem:
-        featured_reco +=  "screen and memory are one of the best feature"
-    if scr > batt and scr > spd and scr > mem and scr == aud:
-        featured_reco +=  "screen and audio are one of the best feature"
-    if spd > batt and spd > aud and spd > scr and spd == mem:
-        featured_reco +=  "speed and memory are one of the best feature"    
-    if spd > batt and spd > aud and spd > scr and spd == aud:
-        featured_reco +=  "speed and audio are one of the best feature"
-    if mem > batt and mem > spd and mem > scr and mem == aud:
-        featured_reco +=  "memory and audio are one of the best feature"
+    # if batt > mem and batt > aud and batt > spd and batt == scr:
+    #     featured_reco +=  "battery and screen are one of the best feature"
+    # if batt > mem and batt > aud and batt > scr and batt == spd:
+    #     featured_reco +=  "battery and speed are one of the best feature"    
+    # if batt > mem and batt > aud and batt > spd and batt == aud:
+    #     featured_reco +=  "battery and audio are one of the best feature"
+    # if batt > spd and batt > aud and batt > scr and batt == mem:
+    #     featured_reco +=  "battery and memory are one of the best feature"
+    # if scr > batt and scr > mem and scr > aud and scr == spd:
+    #     featured_reco +=  "screen and speed are one of the best feature"
+    # if scr > batt and scr > spd and spd > aud and scr == mem:
+    #     featured_reco +=  "screen and memory are one of the best feature"
+    # if scr > batt and scr > spd and scr > mem and scr == aud:
+    #     featured_reco +=  "screen and audio are one of the best feature"
+    # if spd > batt and spd > aud and spd > scr and spd == mem:
+    #     featured_reco +=  "speed and memory are one of the best feature"    
+    # if spd > batt and spd > aud and spd > scr and spd == aud:
+    #     featured_reco +=  "speed and audio are one of the best feature"
+    # if mem > batt and mem > spd and mem > scr and mem == aud:
+    #     featured_reco +=  "memory and audio are one of the best feature"
         
     summary_reco = "Based on the " + str(temp_df_count["count"][0]) + " reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
     summary_reco = summary_reco.split("\n")
@@ -613,14 +611,12 @@ def sub_LSTM(temp_df):
     plt.grid()
 
 def sub_KMeans(gadgettype):
-    gadgettype = "Smartphone"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
     kmeans_df = kmeans_df.iloc[:10000,:]
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
     pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
-    num_clusters = 5  # Choose the number of clusters)
-    
+    num_clusters = 5  # Choose the number of clusters)    
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
     user_id = 1
@@ -628,17 +624,10 @@ def sub_KMeans(gadgettype):
     users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
     average_ratings = pivot_table.loc[users_in_same_cluster].mean()
     sorted_ratings = average_ratings.sort_values(ascending=False)
-
-    # Get top(k) recommendations
     k = 3
     top_kmeans_reco = sorted_ratings.head(k)
 
-    # Print the top-k recommendations
-    for product_id, rating in top_kmeans_reco.items():
-        #top_reco = product_id
-        print("Product ID:", product_id, "Rating:", rating)
-
-    return top_kmeans_reco, k
+    return top_kmeans_reco.items(), k
     
 @app.route("/newdataset")
 def index():
