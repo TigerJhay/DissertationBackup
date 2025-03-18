@@ -628,7 +628,14 @@ def sub_KMeans(gadgettype):
     top_kmeans_reco = sorted_ratings.head(k)
 
     return top_kmeans_reco.items(), k
-    
+
+def sub_evaluation_metrics():
+    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import classification_report
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report   (y_test, y_pred))
+
+
 @app.route("/newdataset")
 def index():
     mysqlconn.reconnect()
