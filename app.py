@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 import sqlalchemy as sqlalch
 import openai
 
-views = Blueprint(__name__, "views")
+#views = Blueprint(__name__, "views")
 app = Flask(__name__)
 
 mysqlconn = mysql.connector.connect(
@@ -125,7 +125,7 @@ def modelcomplete():
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
     # brands = "Samsung"
-    # type = "Cellphone"
+    # type = "Smartphone"
     # model = "Galaxy S24+"
     brands = session["brands"]
     type = session["type"]
@@ -133,7 +133,8 @@ def modelrecommendation():
     complete_gadget = brands + " " + type + " " + model
     item_desc = brands +  " " + model
     mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'", mysqlconn)
+    sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'"
+    temp_df = pd.read_sql(sqlstring, mysqlconn)
     temp_df = sub_datacleaning(temp_df)
     
     attrib_table(temp_df)
@@ -142,19 +143,23 @@ def modelrecommendation():
     airesult = sub_AIresult(item_desc)
     dev_images = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
-    sub_LSTM(temp_df)
+    epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs = sub_LSTM(temp_df)
     
     return render_template("index.html",
-                           shop_loc_list = shop_loc_list,
-                           dev_images = dev_images,
-                           ai_result = airesult,
-                           str_recommendation = summary_reco,
-                           str_featreco = featured_reco,
-                           str_details = detailed_reco,
-                           complete_gadget = complete_gadget,
-                           top_reco = top_reco,
-                           k_count = k_count
-                           )
+                        shop_loc_list = shop_loc_list,
+                        dev_images = dev_images,
+                        ai_result = airesult,
+                        str_recommendation = summary_reco,
+                        str_featreco = featured_reco,
+                        str_details = detailed_reco,
+                        complete_gadget = complete_gadget,
+                        top_reco = top_reco,
+                        k_count = k_count,
+                        epoch_train_losses = epoch_train_losses,
+                        epoch_train_accs = epoch_train_accs,
+                        epoch_test_losses = epoch_test_losses,
+                        epoch_test_accs = epoch_test_accs
+                        )
 
 def sub_recommendation_summary(model):
     mysqlconn.close()
@@ -230,14 +235,15 @@ def sub_AIresult(item_desc):
         return airesult
 
 def sub_AIresult_Shop_Loc(item_desc):
-        #item_desc = "Apple iphone 15"
-        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
-        shoploc_list = shoploc_list.split("**")
-        shoploc_list = [strvalue.replace("\n","") for strvalue in shoploc_list]
-        shoploc_list = [strvalue.replace("*","<br>") for strvalue in shoploc_list]
-        return shoploc_list
+    import google.generativeai as genai
+    item_desc = "Apple iphone 15"
+    genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
+    shoploc_list = shoploc_list.split("**")
+    shoploc_list = [strvalue.replace("\n","") for strvalue in shoploc_list]
+    shoploc_list = [strvalue.replace("*","<br>") for strvalue in shoploc_list]
+    return shoploc_list
     
 def sub_OpenAI(model, type, brand):
     # brand = "Samsung" 
@@ -311,7 +317,7 @@ def attrib_table(temp_df_attrib):
     #--------------------------------------------------------------------------------------------
     #Extracting phrases for creating corpora that will be use in decision tree recommendation
     #--------------------------------------------------------------------------------------------
-
+    temp_df_attrib = temp_df
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
     df = pd.DataFrame()
     def extract_attrib(attrib_value):
@@ -330,6 +336,7 @@ def attrib_table(temp_df_attrib):
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}audio\b(?:\W+\w+){0,2})')
         else:
             df_temp["Attribute"] = attrib_value
+        
         df_temp = df_temp.dropna(axis=0, subset=["Reviews"], how='any')
         df_temp = df_temp.drop_duplicates(subset="Reviews")
         df_temp["Attribute"] = attrib_value
@@ -340,7 +347,7 @@ def attrib_table(temp_df_attrib):
         df = pd.concat([df, extract_attrib(attrib)])
 
     attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR", "Aud_PR", "Aud_NR"])
-    gadget_list = distinct_value = df_reviews["Model"].unique()
+    gadget_list = df_reviews["Model"].unique()
 
     def convert_to_matrix(gadget_model):
         df_model = df.loc[df["Model"].str.contains(gadget_model)]
@@ -369,7 +376,7 @@ def attrib_table(temp_df_attrib):
 
     for colname in gadget_list:
         attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
-    attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=False)
+    attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=True)
 
 def sub_NaiveBayes(temp_df, type):
         
@@ -591,24 +598,25 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-    import matplotlib.pyplot as pl
-    
-    fig = plt.figure(figsize = (10, 3))
-    plt.subplot(1, 2, 1)
-    plt.plot(epoch_train_accs, label='Train Accuracy')
-    plt.plot(epoch_test_accs, label='Test Accuracy')
-    plt.title("Accuracy")
-    plt.legend()
-    plt.grid()
+    return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
 
-    plt.subplot(1, 2, 2)
-    plt.plot(epoch_train_losses, label='Train Loss')
-    plt.savefig("static\HTML\images\LSTM_train_acc.png")
-    plt.plot(epoch_test_losses, label='Test Loss')
-    plt.savefig("static\HTML\images\LSTM_test_acc.png")
-    plt.title("Loss")
-    plt.legend()
-    plt.grid()
+    # import matplotlib.pyplot as pl
+    # fig = plt.figure(figsize = (10, 3))
+    # plt.subplot(1, 2, 1)
+    # plt.plot(epoch_train_accs, label='Train Accuracy')
+    # plt.plot(epoch_test_accs, label='Test Accuracy')
+    # plt.title("Accuracy")
+    # plt.legend()
+    # plt.grid()
+
+    # plt.subplot(1, 2, 2)
+    # plt.plot(epoch_train_losses, label='Train Loss')
+    # plt.savefig("static\HTML\images\LSTM_train_acc.png")
+    # plt.plot(epoch_test_losses, label='Test Loss')
+    # plt.savefig("static\HTML\images\LSTM_test_acc.png")
+    # plt.title("Loss")
+    # plt.legend()
+    # plt.grid()
 
 def sub_KMeans(gadgettype):
     mysqlconn.reconnect()
