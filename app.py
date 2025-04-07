@@ -54,36 +54,58 @@ def uploadCSV():
 @app.route("/imgURLUpload", methods=["GET", "POST"])
 def addImageURL():
     imagepath = str(request.form["txturldisplay1"])
+    imagepath2 = str(request.form["txturldisplay2"])
+    imagepath3 = str(request.form["txturldisplay3"])
+    imagepath4 = str(request.form["txturldisplay4"])
     brand =  session["ndsbrands"]
     type = session["ndstype"]
     model = session["ndsmodel"]
     cursor = mysqlconn.cursor()
-    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path) VALUES (%s,%s,%s,%s)"    
-    strvalue = (model, brand, type, imagepath,)
+    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path,Path2,Path3,Path4) VALUES (%s,%s,%s,%s,%s,%s,%s)"    
+    strvalue = (model, brand, type, imagepath,imagepath2,imagepath3,imagepath4,)
     cursor.execute(sqlstring, strvalue)
     mysqlconn.commit()
     mysqlconn.close()
     notif = "Image Uploaded"
     return render_template("newdataset.html", notif=notif)
 
+@app.route("/newdataset")
+def index():
+    mysqlconn.reconnect()
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
+    brands = temp_df["Brand"].drop_duplicates()
+    mysqlconn.close()
+    return render_template("newdataset.html",brands = brands.to_numpy())
+
 @app.route("/ndsbrandtype", methods=["GET", "POST"])
 def ndsbrandtype():
-    session["ndsbrands"]= str(request.form["gadgetBrand"])
+    session["ndsbrands"]= str(request.form["ndsgadgetBrand"])
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", mysqlconn)
     gadgetType = temp_df["Type"].drop_duplicates()
-    return render_template("newdataset.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["ndsbrands"])
+    return render_template("newdataset.html", 
+                           gadgetType = gadgetType.to_numpy(), 
+                           selectbrand= session["ndsbrands"])
  
 @app.route("/ndstypemodel", methods=["GET", "POST"])
 def ndstypemodel():
     session["ndstype"]= str(request.form["gadgetType"])
+    mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", mysqlconn)
     gadgetModel = temp_df["Model"].drop_duplicates()
-    return render_template("newdataset.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["ndstype"], selectbrand= session["ndsbrands"])
+    return render_template("newdataset.html", 
+                           gadgetModel = gadgetModel.to_numpy(), 
+                           selectedtype = session["ndstype"], 
+                           selectbrand= session["ndsbrands"])
 
 @app.route("/ndsmodelcomplete", methods=["GET", "POST"])
 def ndsmodelcomplete():
     session["ndsmodel"] = str(request.form["gadgetModel"])
-    return render_template("newdataset.html", selectedtype = session["ndstype"], selectbrand= session["ndsbrands"], selectedmodel = session["ndsmodel"])
+    mysqlconn.reconnect()
+    return render_template("newdataset.html", 
+                           selectedtype = session["ndstype"], 
+                           selectbrand= session["ndsbrands"], 
+                           selectedmodel = session["ndsmodel"])
 
 # -------------------------------------------------- 
 # For Index.html
@@ -141,13 +163,16 @@ def modelrecommendation():
     top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
     airesult = sub_AIresult(item_desc)
-    dev_images = sub_OpenAI(model, type, brands)
+    dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
     epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs = sub_LSTM(temp_df)
     
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
-                        dev_images = dev_images,
+                        dev_images1 = dev_images1,
+                        dev_images2 = dev_images2,
+                        dev_images3 = dev_images3,
+                        dev_images4 = dev_images4,
                         ai_result = airesult,
                         str_recommendation = summary_reco,
                         str_featreco = featured_reco,
@@ -246,21 +271,29 @@ def sub_AIresult_Shop_Loc(item_desc):
     return shoploc_list
     
 def sub_OpenAI(model, type, brand):
-    # brand = "Samsung" 
-    # type = "Cellphone"
-    # model = "Galaxy S24+"
+    brand = "Samsung" 
+    type = "Smartphone"
+    model = "Galaxy S24+"
     cursor = mysqlconn.cursor()
-    cursor.execute("SELECT Path FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
+    cursor.execute("SELECT Path, Path2, Path3, Path4 FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
-    if img_result is None:
-        fetch_img_result = "/static/HTML/images/NIA.jpg"
+    #img_result = cursor.fetchall()
+    
+    if len(img_result[0]) == 0:
+        fetch_img_result1 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result2 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result3 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result4 = "./static/HTML/images/NIA.jpg"
     else:
-        fetch_img_result = img_result[0]
+        fetch_img_result1 = img_result[0]
+        fetch_img_result2 = img_result[1]
+        fetch_img_result3 = img_result[2]
+        fetch_img_result4 = img_result[3]
     cursor.close()
     # img_result[0]
     # for x in img_result:
     #     print(x)
-    return fetch_img_result
+    return fetch_img_result1, fetch_img_result2, fetch_img_result3, fetch_img_result4
         
 def sub_datacleaning(temp_df):
         lemmatizer = WordNetLemmatizer()
@@ -317,7 +350,7 @@ def attrib_table(temp_df_attrib):
     #--------------------------------------------------------------------------------------------
     #Extracting phrases for creating corpora that will be use in decision tree recommendation
     #--------------------------------------------------------------------------------------------
-    temp_df_attrib = temp_df
+    #temp_df_attrib = temp_df
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
     df = pd.DataFrame()
     def extract_attrib(attrib_value):
@@ -644,13 +677,7 @@ def sub_evaluation_metrics():
     print(classification_report   (y_test, y_pred))
 
 
-@app.route("/newdataset")
-def index():
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
-    brands = temp_df["Brand"].drop_duplicates()
-    mysqlconn.close()
-    return render_template("newdataset.html",brands = brands.to_numpy())
+
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
