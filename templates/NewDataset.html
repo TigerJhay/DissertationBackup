@@ -84,7 +84,7 @@
                  <!-- Select Brand -->
                   <div class="p-2 w-25 d-inline-block">
                     <form action="ndsbrandtype" name="LoadListItems" method="POST">
-                    <select name="gadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
+                    <select name="ndsgadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
                       <option selected value="None" >Brand</option>
                         {% for optionvalue in brands%}
                           <option value="{{optionvalue}}">{{optionvalue}}</option>
@@ -117,15 +117,26 @@
                   </form>
                 </div>
                 <!-- End Select Model -->
+
                 <div>{{selectbrand}} {{selectedtype}} {{selectedmodel}}
                 <form name="imgURLUpload" action="/imgURLUpload" method="POST">
-                  <div class="cust_uploadfile" id="cust_drop-area-container">
-                      <label for="cust_input-file" id="cust_drop-area">
-                          <div id="cust_image-preview"></div>
-                      </label>
+                  <div class="cust_uploadfile d-inline" id="cust_drop-area-container">
+                    <label for="cust_input-file" id="cust_drop-area">
+                        <div id="cust_image-preview"></div>
+                    </label>
                     </div>
                   <input type="text" id="cust_url-display" name="txturldisplay1" size="100" hidden>
-                  <input type="submit" value="Upload Image and details">  
+                  
+                  <div class="d-block" > 
+                    URL of Image 2<input type="text" name="txturldisplay2" size="100" >
+                  </div>
+                  <div class="d-block" > 
+                    URL of Image 3<input type="text" name="txturldisplay3" size="100" >
+                  </div>                  
+                  <div class="d-block" > 
+                    URL of Image 4<input type="text" name="txturldisplay4" size="100" >
+                  </div>
+                  <input type="submit" class="btn btn-primary" value="Upload Image and details">  
                  </div> 
                </form>  
         </div>
