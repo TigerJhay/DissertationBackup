@@ -16,7 +16,7 @@
               <li><a href="#"><i class="fas fa-home"></i>Main</a></li>
               <li><a href="/newdataset"><i class="fas fa-user"></i>New Dataset</a></li>
               <li><a href="#"><i class="fas fa-address-card"></i>Lorem Ipsum</a></li>
-          </ul> 
+          </ul>
       </div>
       <div class="container-fluid main_content p-0">
         <div class="row g-3">
@@ -80,18 +80,60 @@
                 This system will give a recommendation of your choosen gadget with the help of generative AI</span>
             </div>
           </div> -->
-          <div class="col-12">
-            <div class="card" style="height: 400px;">
-              <div class="card-header"><h6>Actual Product Image/s of your selected device</h6></div>  
-                <div class="card-body col"> 
-
+          <div class="col-8">
+            <div class="card">
+              <div class="card-header"><h6>Actual Product Image/s of your selected device</h6></div>
+                <div class="card-body col">
+                    <center>
+                    <div style="width: 300px; height:300px">
+                      <div id="carousel_Gadgets" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                          <div class="carousel-item active">
+                            <img src="{{dev_images1}}" class="d-block mx-auto img-fluid" alt="..." onerror="this.onerror=null; this.src='./static/HTML/images/NIA.jpg'">
+                          </div>
+                          <div class="carousel-item">
+                            <img src="{{dev_images2}}" class="d-block mx-auto img-fluid" alt="..." onerror="this.onerror=null; this.src='./static/HTML/images/NIA.jpg'">
+                          </div>
+                          <div class="carousel-item">
+                            <img src="{{dev_images3}}" class="d-block mx-auto img-fluid" alt="..." onerror="this.onerror=null; this.src='./static/HTML/images/NIA.jpg'">
+                          </div>
+                          <div class="carousel-item">
+                            <img src="{{dev_images4}}" class="d-block mx-auto img-fluid" alt="..." onerror="this.onerror=null; this.src='./static/HTML/images/NIA.jpg'">
+                          </div>
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel_Gadgets" data-bs-slide="prev">
+                          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                          <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#carousel_Gadgets" data-bs-slide="next">
+                          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                          <span class="visually-hidden">Next</span>
+                        </button>
+                      </div>
+                  </div>
+                  </center>
                 </div>
             </div>
           </div>
+
+        <div class="col-4">
+            <div class="card">
+                <div class="card-header">Shops to buy this device</div>
+                <div class="card-body overflow-auto" style="height: 300px;">
+                    <h6 class="card-title">Shops:</h6>
+                    <p class="card-text ">
+                      {%for shop_loc in shop_loc_list %}
+                      {{shop_loc | safe}} <br>
+                      {% endfor %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
           <div class="col-3">
             <div class="card">
               <div class="card-header"><h6>Review summary</h6></div>
-                <div class="card-body col" style="height: 300px;"> 
+                <div class="card-body col" style="height: 300px;">
                   <h6 class="card-title">Based on reviews of users and buyers</h6>
                     <p class="card-text">
                       {% for str_recommendation in str_recommendation %}
@@ -102,85 +144,64 @@
                       {% endfor %}
                     </p>
                 </div>
-            </div>   
+            </div>
           </div>
           <div class="col-5">
             <div class="card">
-              <div class="card-header"><h6>Recommendation based on the gathered reviews of users and buyers</h6></div>
-                <div class="card-body col overflow-auto" style="height: 300px;"> 
+              <div class="card-header"><h6>Recommendation based on reviews of users and buyers</h6></div>
+                <div class="card-body col overflow-auto" style="height: 300px;">
                   <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
-                    <p class="card-text">              
-                        {{str_details}}                
-                    </p>
-                </div>
-            </div>   
-          </div>
-          <div class="col-4">
-            <div class="card">
-                <div class="card-header">Shops to buy this device</div>
-                <div class="card-body overflow-auto" style="height: 300px;"> 
-                    <h6 class="card-title">Shops:</h6>
-                    <p class="card-text ">
-                      {%for shop_loc in shop_loc_list %}
-                      {{shop_loc | safe}} <br>
-                      {% endfor %}
+                    <p class="card-text">
+                        {{str_details}}
                     </p>
                 </div>
             </div>
           </div>
 
-          <div class="col-8">
-            <div class="card">
-              <div class="card-header">Generated information assisted via A.I</div>
-              <div class="card-body overflow-auto" style="height: 400px;">
-                  <h6 class="card-title"></h6>
-                  <p class="card-text">
-                    {{ai_result | safe}}
-                    <!-- Some quick example text to build on the card title and make up the bulk of the card's content.
-                    Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dolore nam consequatur et! In, iste. Quae repudiandae velit sit odio. Magnam officia reprehenderit et ex inventore eius cupiditate vitae aperiam quos! -->
-                  </p>
-              </div>                        
-            </div>
-          </div>
           <!-- Other Top 3 Recommendation  -->
           <div class="col-4">
             <div class="card">
               <div class="card-header">Other {{k_count | safe}} Recommendations</div>
-              <div class="card-body overflow-auto" style="height: 400px;">
+              <div class="card-body overflow-auto" style="height: 300px;">
                   <p class="card-text">
                     {% for reco, reco_count in top_reco %}
                       {{reco | safe}} - {{ reco_count | safe}} <br>
-                    {% endfor %}            
+                    {% endfor %}
+
                   </p>
-              </div>                        
+              </div>
             </div>
           </div>
           <!--  -->
-          <div class="col-12">
+
+          <div class="col-8">
             <div class="card">
-              <div class="card-header">LSTM Prediction Train</div>
-              <div class="card-body"> 
-                  <!-- <image src="{{ url_for('static', filename='/HTML/images/lstm_train_acc.png')}}" class="border border-3"> -->
+              <div class="card-header">Generated information assisted via A.I</div>
+              <div class="card-body overflow-auto" style="height: 300px;">
+                  <h6 class="card-title"></h6>
                   <p class="card-text">
-                      Epoch train losses: {{epoch_train_losses | safe}} <br>
-                      Epoch train losses: {{epoch_train_accs | safe}}  <br>
+                    {{ai_result | safe}}
                   </p>
-              </div>    
+              </div>
             </div>
           </div>
 
-          <div class="col-12">
+
+
+          <div class="col-4">
             <div class="card">
-              <div class="card-header">LSTM Prediction Test</div>
+              <div class="card-header">LSTM Prediction Train</div>
               <div class="card-body">
-                  <!-- <image src="{{ url_for('static', filename='/HTML/images/lstm_test_acc.png')}}" class="border border-3"> -->
                   <p class="card-text">
+                    Epoch train losses: {{epoch_train_losses | safe}} <br>
+                    Epoch train losses: {{epoch_train_accs | safe}}  <br>
                     Epoch test losses: {{epoch_test_losses| safe}} <br>
                     Epoch test losses: {{epoch_test_accs | safe}} <br>
                   </p>
               </div>
-            </div>  
-        </div>
+            </div>
+          </div>
+
         </div>
       </div>
   </div>

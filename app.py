@@ -53,10 +53,26 @@ def uploadCSV():
 
 @app.route("/imgURLUpload", methods=["GET", "POST"])
 def addImageURL():
-    imagepath = str(request.form["txturldisplay1"])
-    imagepath2 = str(request.form["txturldisplay2"])
-    imagepath3 = str(request.form["txturldisplay3"])
-    imagepath4 = str(request.form["txturldisplay4"])
+    if str(request.form["txturldisplay1"]) != "":
+        imagepath = str(request.form["txturldisplay1"])
+    else:
+        imagepath= "./static/HTML/images/NIA.jpg"
+    
+    if str(request.form["txturldisplay2"]) != "":
+        imagepath2 = str(request.form["txturldisplay2"]) 
+    else:
+        imagepath2="./static/HTML/images/NIA.jpg"
+
+    if str(request.form["txturldisplay3"]) != "":
+        imagepath3 = str(request.form["txturldisplay3"]) 
+    else:
+        imagepath3="./static/HTML/images/NIA.jpg"
+    
+    if str(request.form["txturldisplay4"]) != "":
+        imagepath4 = str(request.form["txturldisplay4"]) 
+    else:
+        imagepath4="./static/HTML/images/NIA.jpg"
+
     brand =  session["ndsbrands"]
     type = session["ndstype"]
     model = session["ndsmodel"]
@@ -271,24 +287,18 @@ def sub_AIresult_Shop_Loc(item_desc):
     return shoploc_list
     
 def sub_OpenAI(model, type, brand):
-    brand = "Samsung" 
+    brand = "Apple" 
     type = "Smartphone"
-    model = "Galaxy S24+"
+    model = "iPhone 15"
     cursor = mysqlconn.cursor()
     cursor.execute("SELECT Path, Path2, Path3, Path4 FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
     #img_result = cursor.fetchall()
     
-    if len(img_result[0]) == 0:
-        fetch_img_result1 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result2 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result3 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result4 = "./static/HTML/images/NIA.jpg"
-    else:
-        fetch_img_result1 = img_result[0]
-        fetch_img_result2 = img_result[1]
-        fetch_img_result3 = img_result[2]
-        fetch_img_result4 = img_result[3]
+    fetch_img_result1 = img_result[0]
+    fetch_img_result2 = img_result[1]
+    fetch_img_result3 = img_result[2]
+    fetch_img_result4 = img_result[3]
     cursor.close()
     # img_result[0]
     # for x in img_result:
