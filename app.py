@@ -143,7 +143,7 @@ def modelrecommendation():
     airesult = sub_AIresult(item_desc)
     dev_images = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
-    epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs = sub_LSTM(temp_df)
+    train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
     
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
@@ -155,10 +155,10 @@ def modelrecommendation():
                         complete_gadget = complete_gadget,
                         top_reco = top_reco,
                         k_count = k_count,
-                        epoch_train_losses = epoch_train_losses,
-                        epoch_train_accs = epoch_train_accs,
-                        epoch_test_losses = epoch_test_losses,
-                        epoch_test_accs = epoch_test_accs
+                        epoch_train_losses = train_loss,
+                        epoch_train_accs = train_accs,
+                        epoch_test_losses = test_loss,
+                        epoch_test_accs = test_accs
                         )
 
 def sub_recommendation_summary(model):
@@ -317,7 +317,7 @@ def attrib_table(temp_df_attrib):
     #--------------------------------------------------------------------------------------------
     #Extracting phrases for creating corpora that will be use in decision tree recommendation
     #--------------------------------------------------------------------------------------------
-    temp_df_attrib = temp_df
+    #temp_df_attrib = temp_df
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
     df = pd.DataFrame()
     def extract_attrib(attrib_value):
@@ -587,18 +587,24 @@ def sub_LSTM(temp_df):
     epoch_train_accs = []
     epoch_test_losses = []
     epoch_test_accs = []
+
     for epoch in range(epochs):
         epoch_train_loss, epoch_train_acc = train_loop(lstm_model, train_loader, optimizer, criterion)
+        train_loss = round(epoch_train_loss,3)
+        train_accs = round(epoch_train_acc,3)
+
         epoch_test_loss, epoch_test_acc = test_loop(lstm_model, test_loader, criterion)
+        test_loss = round(epoch_test_loss,3)
+        test_accs = round(epoch_test_acc,3)
 
         print(f'Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss:.4f} Train Acc: {epoch_train_acc:.4f} | Test Loss: {epoch_test_loss:.4f} Test Acc: {epoch_test_acc:.4f}')
-
         epoch_train_losses.append(epoch_train_loss)
         epoch_train_accs.append(epoch_train_acc)
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-    return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
+    return train_loss, train_accs, test_loss, test_accs
+    # return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
 
     # import matplotlib.pyplot as pl
     # fig = plt.figure(figsize = (10, 3))
