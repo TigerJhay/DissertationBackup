@@ -162,9 +162,9 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    # brands = "Samsung"
-    # type = "Smartphone"
-    # model = "Galaxy S24+"
+    brands = "Samsung"
+    type = "Smartphone"
+    model = "Galaxy S24+"
     brands = session["brands"]
     type = session["type"]
     model = str(request.form["gadgetModel"])
@@ -178,9 +178,11 @@ def modelrecommendation():
     attrib_table(temp_df)
     top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
+    attrib_piechart(summary_reco)
     airesult = sub_AIresult(item_desc)
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
+
     train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
     
     return render_template("index.html",
@@ -203,6 +205,7 @@ def modelrecommendation():
                         )
 
 def sub_recommendation_summary(model):
+#    model = "iPhone 13"
     mysqlconn.close()
     mysqlconn._open_connection()
     # model = "Galaxy S24+"
@@ -239,30 +242,10 @@ def sub_recommendation_summary(model):
     else:
         featured_reco += "Neither of the features is good or bad"
         sub_featured += "Over all, the gadget is neither good nor bad. It is just an average gadget."
-    
-    # if batt > mem and batt > aud and batt > spd and batt == scr:
-    #     featured_reco +=  "battery and screen are one of the best feature"
-    # if batt > mem and batt > aud and batt > scr and batt == spd:
-    #     featured_reco +=  "battery and speed are one of the best feature"    
-    # if batt > mem and batt > aud and batt > spd and batt == aud:
-    #     featured_reco +=  "battery and audio are one of the best feature"
-    # if batt > spd and batt > aud and batt > scr and batt == mem:
-    #     featured_reco +=  "battery and memory are one of the best feature"
-    # if scr > batt and scr > mem and scr > aud and scr == spd:
-    #     featured_reco +=  "screen and speed are one of the best feature"
-    # if scr > batt and scr > spd and spd > aud and scr == mem:
-    #     featured_reco +=  "screen and memory are one of the best feature"
-    # if scr > batt and scr > spd and scr > mem and scr == aud:
-    #     featured_reco +=  "screen and audio are one of the best feature"
-    # if spd > batt and spd > aud and spd > scr and spd == mem:
-    #     featured_reco +=  "speed and memory are one of the best feature"    
-    # if spd > batt and spd > aud and spd > scr and spd == aud:
-    #     featured_reco +=  "speed and audio are one of the best feature"
-    # if mem > batt and mem > spd and mem > scr and mem == aud:
-    #     featured_reco +=  "memory and audio are one of the best feature"
         
-    summary_reco = "Based on the " + str(temp_df_count["count"][0]) + " reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
-    summary_reco = summary_reco.split("\n")
+    #summary_reco = "Based on the " + str(temp_df_count["count"][0]) + " reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
+    summary_reco = [ temp_df_reco["Batt_PR"][0], temp_df_reco["Scr_PR"][0], temp_df_reco["Spd_PR"][0], temp_df_reco["Mem_PR"][0], temp_df_reco["Aud_PR"][0] ] 
+    #summary_reco = summary_reco.split("\n")
     return summary_reco, featured_reco, sub_featured 
     
 def sub_AIresult(item_desc):
@@ -287,22 +270,23 @@ def sub_AIresult_Shop_Loc(item_desc):
     return shoploc_list
     
 def sub_OpenAI(model, type, brand):
-    brand = "Apple" 
-    type = "Smartphone"
-    model = "iPhone 15"
+    # brand = "Apple" 
+    # type = "Smartphone"
+    # model = "iPhone 15"
     cursor = mysqlconn.cursor()
     cursor.execute("SELECT Path, Path2, Path3, Path4 FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
     img_result = cursor.fetchone()
-    #img_result = cursor.fetchall()
-    
-    fetch_img_result1 = img_result[0]
-    fetch_img_result2 = img_result[1]
-    fetch_img_result3 = img_result[2]
-    fetch_img_result4 = img_result[3]
+    if img_result is not None:
+        fetch_img_result1 = img_result[0]
+        fetch_img_result2 = img_result[1]
+        fetch_img_result3 = img_result[2]
+        fetch_img_result4 = img_result[3]
+    else:
+        fetch_img_result1 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result2 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result3 = "./static/HTML/images/NIA.jpg"
+        fetch_img_result4 = "./static/HTML/images/NIA.jpg"
     cursor.close()
-    # img_result[0]
-    # for x in img_result:
-    #     print(x)
     return fetch_img_result1, fetch_img_result2, fetch_img_result3, fetch_img_result4
         
 def sub_datacleaning(temp_df):
@@ -421,6 +405,24 @@ def attrib_table(temp_df_attrib):
         attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
     attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=True)
 
+def attrib_piechart(data_count):
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+
+    #data = [100, 27, 20, 1,1]
+
+    gadgetnames = ['Battery', 'Screen', 'Speed', 'RAM', 'Audio']
+    bar_labels = ['Battery', 'Screen', 'Speed', 'RAM','Audio']
+    bar_colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange', 'tab:purple']
+
+    ax.bar(gadgetnames, data_count, label=bar_labels, color=bar_colors)
+    ax.set_ylabel('User Reviews')
+    ax.set_title('Summary of User Gadget Reviews')
+    ax.legend(title='Gadget Labels')
+    plt.savefig(".\static\HTML\images\Summary_Graph.png")
+    #plt.show()
+
 def sub_NaiveBayes(temp_df, type):
         
         #----------------------------------------------------------
@@ -455,10 +457,14 @@ def sub_LSTM(temp_df):
 #---------------------------------------
 # This portion is for LSTM algorithm
 #---------------------------------------
+    import torch
+    from torch.utils.data import DataLoader, TensorDataset
+    from gensim.models import Word2Vec
+    
     embedding_size = 50
     SEQUENCE_LENGTH = 50
-    batch_size = 100
-    epochs = 20
+    batch_size = 64
+    epochs = 10
 
     #Tokenize all words in the dataframe
     temp_df["Reviews"] = temp_df["Reviews"].apply(word_tokenize)
@@ -470,15 +476,21 @@ def sub_LSTM(temp_df):
     all_reviews = df_train['Reviews'].tolist()
     all_reviews.extend(df_test['Reviews'].tolist())
 
-    from gensim.models import Word2Vec
+
+
+    #Train Word2Vec
     wordvector_model = Word2Vec(all_reviews, vector_size=50)
+    
+    # Word2index dictionary
+    word2idx = {word: i+1 for i, word in enumerate(wordvector_model.wv.index_to_key)}
+    #word2idx["<PAD>"] = 0
+
     #wv['_____'] the value inside wv is the value needed for prediction
-    #wordvector_model.wv[gadget_search]
+    wordvector_model.wv[word2idx]
     #value = wordvector_model.wv.most_similar(gadget_search, topn=3)
     #print (value)
-    import torch
-    from torch.utils.data import DataLoader, TensorDataset
 
+    #Embedding Matrix
     def convert_sequences_to_tensor(sequences, num_tokens_in_sequence, embedding_size):
         num_sequences = len(sequences)
         print((num_sequences, num_tokens_in_sequence, embedding_size))
@@ -686,11 +698,11 @@ def sub_KMeans(gadgettype):
 
     return top_kmeans_reco.items(), k
 
-def sub_evaluation_metrics():
-    from sklearn.metrics import confusion_matrix
-    from sklearn.metrics import classification_report
-    print(confusion_matrix(y_test, y_pred))
-    print(classification_report   (y_test, y_pred))
+# def sub_evaluation_metrics():
+#     from sklearn.metrics import confusion_matrix
+#     from sklearn.metrics import classification_report
+#     print(confusion_matrix(y_test, y_pred))
+#     print(classification_report   (y_test, y_pred))
 
 
 
