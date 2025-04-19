@@ -1,22 +1,16 @@
 from flask import Blueprint, Flask, session, render_template, request, flash, jsonify, url_for
 import google.generativeai as genai
-import os
 from io import StringIO
 import pandas as pd 
 import numpy as np
 from numpy import array
-import re
 import nltk #from wordcloud import wordcloud, STOPWORDS
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn import naive_bayes
 from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 import mysql.connector
@@ -24,6 +18,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import sqlalchemy as sqlalch
 import openai
+
+import gc
+import torch
+gc.collect()
+torch.cuda.empty_cache()
 
 #views = Blueprint(__name__, "views")
 app = Flask(__name__)
@@ -47,7 +46,7 @@ def uploadCSV():
             chunk.to_sql(name="gadget_reviews", con=sqlengine, if_exists="append", index=False)
     except Exception as e:
         print(e)
-        print(csv_string + "value is this")
+        # print(csv_string + "value is this")
 
     return render_template("newdataset.html")
 
@@ -130,7 +129,7 @@ def ndsmodelcomplete():
 @app.route("/")
 def home():
     mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews order by Brand" , mysqlconn)
     brands = temp_df["Brand"].drop_duplicates()
     mysqlconn.close()
     return render_template("index.html", 
@@ -141,7 +140,7 @@ def home():
 def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
     mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"'", mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"' order by Type", mysqlconn)
     mysqlconn.close()
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("index.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["brands"])
@@ -150,7 +149,7 @@ def brandtype():
 def typemodel():
     session["type"]= str(request.form["gadgetType"])
     mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"'", mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"' order by Model", mysqlconn)
     mysqlconn.close()
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("index.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["type"], selectbrand= session["brands"])
@@ -162,9 +161,9 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    brands = "Samsung"
-    type = "Smartphone"
-    model = "Galaxy S24+"
+    # brands = "Samsung"
+    # type = "Smartphone"
+    # model = "Galaxy S24+"
     brands = session["brands"]
     type = session["type"]
     model = str(request.form["gadgetModel"])
@@ -203,6 +202,10 @@ def modelrecommendation():
                         epoch_test_losses = test_loss,
                         epoch_test_accs = test_accs
                         )
+def reset_weights(model):
+    for layer in model.children():
+        if hasattr(layer, 'reset_parameters'):
+            layer.reset_parameters()
 
 def sub_recommendation_summary(model):
 #    model = "iPhone 13"
@@ -224,16 +227,16 @@ def sub_recommendation_summary(model):
     aud = temp_df_reco["Aud_PR"][0]
     featured_reco = ""
     sub_featured = ""
-    if batt > scr and batt > spd and batt > mem:
+    if batt > scr and batt > spd and batt > mem and batt > aud:
         featured_reco += "Battery is one of the best feature."
         sub_featured += "Essentially, a gadget's battery life is a key metric for buyers, shaping their perception of the device's practicality, ease of use, and overall desirability. A long-lasting battery is a key feature for many users, especially those who are always on the go or who use their devices for long periods of time. A long battery life is also a key selling point for many devices, as it can help differentiate a product from its competitors and attract more customers. In addition, a long battery life can help improve a device's overall user experience, as it can reduce the need for frequent charging and allow users to use their devices for longer periods of time without interruption."
-    elif scr > batt and scr > spd and scr > mem:
+    elif scr > batt and scr > spd and scr > mem and scr > aud:
         featured_reco += "Screen size and/or dsplay is one of the best feature"
         sub_featured +=  "Larger, high-resolution screens provide a more immersive and enjoyable experience for watching videos, playing games, and browsing photos. A larger screen also makes it easier to read text and view images, which can be especially useful for users with poor eyesight or who use their devices for extended periods of time. In addition, a high-resolution screen can display more detail and provide a sharper, clearer image, which can enhance the overall viewing experience. A high-quality screen can also help improve a device's overall user experience, as it can make text and images easier to read and provide a more vibrant and engaging display."
-    elif spd > batt and spd > scr and spd > mem:
+    elif spd > batt and spd > scr and spd > mem and spd > aud:
         featured_reco += "Speed or response is one of the best feature"
         sub_featured +=  "A fast processor can help improve a device's overall performance and responsiveness, making it more efficient and enjoyable to use. A fast processor can help reduce lag and improve the speed of tasks such as opening apps, browsing the web, and playing games. A fast processor can also help improve a device's multitasking capabilities, allowing users to run multiple apps simultaneously without experiencing slowdowns or performance issues. In addition, a fast processor can help improve a device's overall user experience, as it can make the device more responsive and enjoyable to use."
-    elif mem > batt and mem > scr and mem > spd:
+    elif mem > batt and mem > scr and mem > spd and mem > aud:
         featured_reco += "Memory is one of the best feature"
         sub_featured += "Sufficient memory, particularly RAM (Random Access Memory), allows gadgets to handle multiple tasks simultaneously without slowing down. This is essential for smooth operation when running various apps or programs. Memory is also important for storing data, such as photos, videos, and music, as well as for running the operating system and other essential software. A gadget with sufficient memory will be able to run smoothly and efficiently, providing a better user experience."
     elif aud > batt and aud > scr and aud > spd and aud > mem:
@@ -260,7 +263,7 @@ def sub_AIresult(item_desc):
 
 def sub_AIresult_Shop_Loc(item_desc):
     import google.generativeai as genai
-    item_desc = "Apple iphone 15"
+    #item_desc = "Apple iphone 15"
     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
     model = genai.GenerativeModel("gemini-1.5-flash")
     shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
@@ -292,19 +295,20 @@ def sub_OpenAI(model, type, brand):
 def sub_datacleaning(temp_df):
         lemmatizer = WordNetLemmatizer()
         nltk.download('stopwords')
-        nltk.download('wordnet')
-        nltk.download('punkt_tab')
-        custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
+        # nltk.download('wordnet')
+        # nltk.download('punkt_tab')
+        # custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
         #Remove Column Username since this column is unnecessary
         temp_df["Reviews"] = temp_df["Reviews"].str.lower()
         # Checking for missing values. Fill necessary and drop if reviews are null
         if temp_df["Username"].isnull().values.any() == True:
             temp_df["Username"] = temp_df["Username"].fillna("No Username")       
-        temp_df["Date"]
+        # temp_df["Date"]
         if temp_df["Date"].isnull().values.any() == True:
             temp_df["Date"] = temp_df["Date"].fillna("1/1/11")
         if temp_df["Reviews"].isnull().values.any() == True:
             temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+
         temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
         temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
         temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
@@ -314,8 +318,15 @@ def sub_datacleaning(temp_df):
         temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
         temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True)
         temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
+        
+        stop_words = set(stopwords.words('english'))
+        def no_more_stopwords(a_list):
+            return [word for word in a_list if word not in stop_words]
+        
+        temp_df["Reviews"] = no_more_stopwords(temp_df["Reviews"])
+
+        # temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(stopwords.words('english')) + r')\b\s*','', regex=True)        
+        # temp_df["Reviews"] = temp_df["Reviews"].replace(r'\b(' + r'|'.join(custom_stopwords) + r')\b\s*','', regex=True)
 
         def lemmatize_review(review_text):
             words = nltk.word_tokenize(review_text)
@@ -343,6 +354,7 @@ def attrib_table(temp_df_attrib):
     
     #--------------------------------------------------------------------------------------------
     #Extracting phrases for creating corpora that will be use in decision tree recommendation
+    # FF: temp_df_attrib here is a cleaned dataset came from datacleaning function
     #--------------------------------------------------------------------------------------------
     #temp_df_attrib = temp_df
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
@@ -422,35 +434,6 @@ def attrib_piechart(data_count):
     ax.legend(title='Gadget Labels')
     plt.savefig(".\static\HTML\images\Summary_Graph.png")
     #plt.show()
-
-def sub_NaiveBayes(temp_df, type):
-        
-        #----------------------------------------------------------
-        #This portion is part of Naive Bayes, Multinomial Algorithm
-        #----------------------------------------------------------
-        vectorize = CountVectorizer()
-
-        y_val = temp_df['Rating']
-        x_val = temp_df['Reviews']
-        x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2)
-        x_train_count = vectorize.fit_transform(x_train.values)
-        x_train_count.toarray()
-
-        classifier = naive_bayes.MultinomialNB()
-        classifier.fit(x_train_count, y_train)
-        
-        #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
-        gadget_review_array = np.array([type])
-        gadget_review_vector = vectorize.transform(gadget_review_array)
-        nb_result = classifier.predict(gadget_review_vector)
-
-        for result in nb_result:
-            nb_value = "No value"
-            if result==0:
-                nb_value = "The sentiment is positive"
-            else:
-                nb_value = "The sentiment is positive"
-        return nb_result
             
 def sub_LSTM(temp_df):   
 
@@ -463,8 +446,9 @@ def sub_LSTM(temp_df):
     
     embedding_size = 50
     SEQUENCE_LENGTH = 50
-    batch_size = 64
-    epochs = 10
+    batch_size = 50
+    epochs = 20
+
 
     #Tokenize all words in the dataframe
     temp_df["Reviews"] = temp_df["Reviews"].apply(word_tokenize)
@@ -476,10 +460,8 @@ def sub_LSTM(temp_df):
     all_reviews = df_train['Reviews'].tolist()
     all_reviews.extend(df_test['Reviews'].tolist())
 
-
-
     #Train Word2Vec
-    wordvector_model = Word2Vec(all_reviews, vector_size=50)
+    wordvector_model = Word2Vec(all_reviews, vector_size = embedding_size)
     
     # Word2index dictionary
     word2idx = {word: i+1 for i, word in enumerate(wordvector_model.wv.index_to_key)}
@@ -487,7 +469,7 @@ def sub_LSTM(temp_df):
 
     #wv['_____'] the value inside wv is the value needed for prediction
     wordvector_model.wv[word2idx]
-    #value = wordvector_model.wv.most_similar(gadget_search, topn=3)
+    # value = wordvector_model.wv.most_similar('bit', topn=3)
     #print (value)
 
     #Embedding Matrix
@@ -584,8 +566,8 @@ def sub_LSTM(temp_df):
     LSTM_NUM_STACKED_LAYERS = 2
 
     lstm_model = LSTMModel(LSTM_INPUT_SIZE, LSTM_HIDDEN_SIZE, LSTM_NUM_STACKED_LAYERS)
-    lstm_model.to(device)
-    print(lstm_model)
+    # lstm_model.to(device)
+    # print(lstm_model)
 
     lr=0.001
     criterion = nn.BCELoss()
@@ -658,31 +640,37 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
+#    import matplotlib.pyplot as plt
+    plt.figure(figsize = (10, 3))
+    plt.subplot(1, 2, 1)
+    plt.plot(epoch_train_accs, label='Train Accuracy')
+    plt.plot(epoch_test_accs, label='Test Accuracy')
+    plt.title("Train")
+    plt.legend()
+    plt.grid()
+   
+    plt.subplot(1, 2, 2)
+    plt.plot(epoch_train_losses, label='Train Loss')
+    plt.plot(epoch_test_losses, label='Test Loss')
+    plt.title("Test")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    #plt.savefig("static\HTML\images\LSTM_train_acc.png")
+    #plt.savefig("static\HTML\images\LSTM_test_acc.png")
+    for layer in lstm_model.children():
+        if hasattr(layer, 'reset_parameters'):
+            layer.reset_parameters()
+
     return train_loss, train_accs, test_loss, test_accs
     # return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
 
-    # import matplotlib.pyplot as pl
-    # fig = plt.figure(figsize = (10, 3))
-    # plt.subplot(1, 2, 1)
-    # plt.plot(epoch_train_accs, label='Train Accuracy')
-    # plt.plot(epoch_test_accs, label='Test Accuracy')
-    # plt.title("Accuracy")
-    # plt.legend()
-    # plt.grid()
-
-    # plt.subplot(1, 2, 2)
-    # plt.plot(epoch_train_losses, label='Train Loss')
-    # plt.savefig("static\HTML\images\LSTM_train_acc.png")
-    # plt.plot(epoch_test_losses, label='Test Loss')
-    # plt.savefig("static\HTML\images\LSTM_test_acc.png")
-    # plt.title("Loss")
-    # plt.legend()
-    # plt.grid()
-
 def sub_KMeans(gadgettype):
+    #gadgettype = "Smartphone"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
-    kmeans_df = kmeans_df.iloc[:10000,:]
+    #kmeans_df = kmeans_df.iloc[:10000,:]
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
     pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
     num_clusters = 5  # Choose the number of clusters)    

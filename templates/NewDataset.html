@@ -6,45 +6,47 @@
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
             <link rel="stylesheet" href="https://getbootstrap.com/docs/5.3/assets/css/docs.css">
-            <link rel="stylesheet" href="{{ url_for('static', filename='template.css') }}">      
+            <link rel="stylesheet" href="{{ url_for('static', filename='template.css') }}">
+            <script src="https://kit.fontawesome.com/5fe966f7b7.js" crossorigin="anonymous"></script>      
     </head>
   <body>
 
   <div class="wrapper">
+    <!-- Start Side Bar -->
     <div class="sidebar">
-        <div class="fs-5 text-center" style="height: 5rem;">Recommender System</div>
+      <center><div class="h3 logo"> E-CRS</div></center>
+      <hr>
         <ul>
-            <li><a href="/"><i class="fas fa-home"></i>Main</a></li>
-            <li><a href="/newdataset"><i class="fas fa-user"></i>New Dataset</a></li>
-            <li><a href="#"><i class="fas fa-address-card"></i>Lorem Ipsum</a></li>
-        </ul> 
+          <li><a href="/"><i class="fa-solid fa-minus"></i> Main</a></li>
+          <li><a href="/newdataset"><i class="fa-solid fa-minus"></i> New Dataset</a></li>
+        </ul>    
+      <hr>
+      <input type="reset" value="Reset" class="btn btn-light w-100 px-1" onclick="window.location.href='/newdataset'">
+
     </div>
-    <div class="container-fluid main_content p-0">
+    <!-- End Side Bar -->
+
+
+    <div class="container-fluid main_content px-2">
       <div class="row g-3">
-        <div class="bg-primary">
-              <div class="text-center fs-1 text-warning">Recommender System</div>
-        </div>
+        <div class="text-center header-title h5 p-2">
+          E-Commerce Recommender System for Choosing Electronic Devices Using Generative A.I with Predictive, Prescriptive and Data Analytics
+          </div>
+        
         <!-- Search Bar -->
-        <div class="col-12 bg-warning">
-          <div class="card">
+        <div class="col-12">
+          <div class="card card-bgcolor-head">
             <div class="row">
-              <div class="col-12 text-center align-middle fs-5"> Upload your CSV file below to update Dataset for better prediction and recommendation result </div>
-              <div class="col-12">
-                <div class="p-2 w-25 d-inline-block">
-                  <form action="brandtype" name="LoadListItems" method="POST">
-                    <!-- Content -->
-                </form>
-              </div>
-              </div>
+              <div class="text-center align-middle fs-5 ">Upload your CSV file below to update Dataset for better prediction and recommendation result </div>
             </div>
           </div>
         </div>
         <!-- End Search Bar -->
         <div class="col-6">
-          <div class="card">
-            <div class="card-header"><h6>Choose File to upload ".csv" file only. Please use proper formatting.</h6></div>
-              <div class="card-body col"> 
-                <h6 class="card-title"> <b> </b></h6>
+          <div class="card card-bgcolor-body">
+            <div class="card-header card-bgcolor-head"> <i class="fa-solid fa-file-import"></i> Upload New Dataset</div>
+              <div class="card-body"> 
+                <h6 class="card-title"> Choose File to upload ".csv" (UTF-8) file only. Please use proper formatting.</h6>
                 <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
                   <div class="input-group mb-3">
                     <input type="file" class="form-control" name="csvfile">              
@@ -55,14 +57,13 @@
         </div>
         </div>
         <div class="col-6">
-          <div class="card">
-            <div class="card-header"><h6>CSV file Format</h6></div>
-              <div class="card-body col"> 
-                <h6 class="card-title"> <b> Note and Instruction  </b></h6>
-                <div class="mb-3" style="font-size: smaller;">
+          <div class="card card-bgcolor-body">
+            <div class="card-header card-bgcolor-head"><i class="fa-solid fa-circle-info"></i> CSV file Format</div>
+              <div class="card-body"> 
+                <b> Note and Instruction </b>
+                <div class=mb-1" style="font-size: smaller;">
                   Upload CSV file with the following format:
                   <table class="table table-striped">
-                      <tr>
                         <td scope="col">Username</td>
                         <td scope="col">Date</td>
                         <td scope="col">Reviews</td>
@@ -70,19 +71,19 @@
                         <td scope="col">Model</td>
                         <td scope="col">Type</td>
                         <td scope="col">Brand</td>
-                      </tr>
                       </table>
-
                 </div>
           </div>   
         </div>
         </div>
         <div class="col-12">
-            <div class="card">
-              <div class="card-header"><h6>Image Upload</h6></div>
-                <div class="card-body col"> 
-                 <!-- Select Brand -->
-                  <div class="p-2 w-25 d-inline-block">
+            <div class="card card-bgcolor-body">
+              <div class="card-header card-bgcolor-head"><i class="fa-solid fa-images"></i> Gadget Image Upload</div>
+                <div class="card-body"> 
+                 <!-- Panel -->
+                  <div style="float: left; height: 100%; width: 300px; padding-right: 5px;">
+                  <!-- Select Brand -->
+                  <div class="px-1 w-100 d-inline-block">
                     <form action="ndsbrandtype" name="LoadListItems" method="POST">
                     <select name="ndsgadgetBrand" id="brandlist" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
                       <option selected value="None" >Brand</option>
@@ -93,8 +94,9 @@
                   </form>
                 </div>
                 <!-- End Select Brand -->
+                 <br>
                 <!-- Select Type -->
-                <div class="p-2 w-25 d-inline-block">
+                <div class="my-0 px-1 w-100 d-inline-block">
                   <form action="ndstypemodel" name="LoadListType" method="POST">
                   <select name="gadgetType" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
                     <option selected>Type</option>
@@ -106,7 +108,7 @@
                 </div>
                 <!-- End Select Type -->
                 <!-- Select Model -->
-                  <div class="p-2 w-25 d-inline-block">
+                  <div class="my-0 px-1 w-100 d-inline-block">
                     <form action="ndsmodelcomplete" name="LoadListType" method="POST">
                       <select name="gadgetModel" class="form-control custom-select custom-select-lg mb-3" onchange="this.form.submit()">
                       <option selected>Model</option>
@@ -117,40 +119,53 @@
                   </form>
                 </div>
                 <!-- End Select Model -->
+              </div>
+                <!-- End Panel -->
 
-                <div>{{selectbrand}} {{selectedtype}} {{selectedmodel}}
                 <form name="imgURLUpload" action="/imgURLUpload" method="POST">
-                  <div class="cust_uploadfile d-inline" id="cust_drop-area-container">
+                  <!-- <div class="cust_uploadfile d-inline" id="cust_drop-area-container">
                     <label for="cust_input-file" id="cust_drop-area">
                         <div id="cust_image-preview"></div>
                     </label>
                     </div>
                   <input type="text" id="cust_url-display" name="txturldisplay1" size="100" hidden>
-                  
-                  <div class="d-block" > 
-                    URL of Image 2<input type="text" name="txturldisplay2" size="100" >
+                   -->
+                   <div class="d-block p-1" > 
+                    URL of Image 1 <input type="text" name="txturldisplay1" size="100" >
                   </div>
-                  <div class="d-block" > 
-                    URL of Image 3<input type="text" name="txturldisplay3" size="100" >
+
+                   <div class="d-block p-1"" > 
+                    URL of Image 2 <input type="text" name="txturldisplay2" size="100" >
+                  </div>
+                  <div class="d-block p-1"" > 
+                    URL of Image 3 <input type="text" name="txturldisplay3" size="100" >
                   </div>                  
-                  <div class="d-block" > 
-                    URL of Image 4<input type="text" name="txturldisplay4" size="100" >
+                  <div class="d-block p-1"" > 
+                    URL of Image 4 <input type="text" name="txturldisplay4" size="100" >
                   </div>
-                  <input type="submit" class="btn btn-primary" value="Upload Image and details">  
-                 </div> 
+                  <br>
+                  <div class="my-0"><h6>
+                    Upload image URL for:{{selectbrand}} {{selectedtype}} {{selectedmodel}}</h6>
+                  </div>
+    
+                  <input type="submit" class="btn btn-secondary w-100 px-1" value="Upload all images ">  
                </form>  
+               
+              </div> 
         </div>
         </div>
-        <div class="col-12">
+        <!-- <div class="col-12">
           <div class="card">
-            <div class="card-header"><h6>CSV file Format</h6></div>
+            <div class="card-header card-bgcolor-head">CSV file Preview</div>
               <div class="card-body col"> 
                 <h6 class="card-title"> <b> </b></h6>
                 <div class="mb-3">
                   {{df_html | safe}}
                 </div>
           </div>   
-        </div>
+        </div> -->
+        <div class="col-12 footer-title" style="height: 50px;">System Design and features for Dissertation study. <br> Develop By: Jherold Valdoz</div>
+
         </div>
         <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
     </body>

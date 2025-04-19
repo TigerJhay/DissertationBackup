@@ -102,3 +102,36 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()
     print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}")
+
+
+
+
+# FUNCTION FOR NAIVE BAYES ALGO
+def sub_NaiveBayes(temp_df, type):
+        
+        #----------------------------------------------------------
+        #This portion is part of Naive Bayes, Multinomial Algorithm
+        #----------------------------------------------------------
+        vectorize = CountVectorizer()
+
+        y_val = temp_df['Rating']
+        x_val = temp_df['Reviews']
+        x_train, x_test, y_train, y_test = train_test_split(x_val, y_val, test_size=0.2)
+        x_train_count = vectorize.fit_transform(x_train.values)
+        x_train_count.toarray()
+
+        classifier = naive_bayes.MultinomialNB()
+        classifier.fit(x_train_count, y_train)
+        
+        #no.array() should be use with predicttion dataset, values encoded are just for testing of algorithm
+        gadget_review_array = np.array([type])
+        gadget_review_vector = vectorize.transform(gadget_review_array)
+        nb_result = classifier.predict(gadget_review_vector)
+
+        for result in nb_result:
+            nb_value = "No value"
+            if result==0:
+                nb_value = "The sentiment is positive"
+            else:
+                nb_value = "The sentiment is positive"
+        return nb_result

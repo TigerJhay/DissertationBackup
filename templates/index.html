@@ -12,6 +12,8 @@
 </head>
 <body>
   <div class="wrapper">
+
+    <!-- Start Side Bar -->
     <div class="sidebar">
       <center><div class="h3 logo"> E-CRS</div></center>
       <hr>
@@ -63,9 +65,8 @@
 
       <input type="reset" value="Reset" class="btn btn-light w-100 px-1" onclick="window.location.href='/'">
           <!-- End search on side -->
-
   </div>
-
+  <!-- End Side Bar -->
       <div class="container-fluid main_content px-2">
         <div class="row g-3">
           <div class="text-center header-title h5 p-2">
@@ -158,13 +159,13 @@
           <div class="col-3">
             <div class="card card-bgcolor-body">
               <div class="card-header card-bgcolor-head"><i class="fa-solid fa-list"></i> Other {{k_count | safe}} Recommendations</div>
-              <div class="card-body overflow-auto" style="height: 300px;">
-                  <p class="card-text">
+              <div class="card-body overflow-auto" style="height: 300px;">               
+                    <ul class="list-group">
                     {% for reco, reco_count in top_reco %}
-                      {{reco | safe}} - {{ reco_count | safe}} <br>
+                      <!-- {{reco | safe}} - {{ reco_count | safe}} <br> -->
+                      <li class="list-group-item"> {{reco | safe}} </li>
                     {% endfor %}
-
-                  </p>
+                    </ul>
               </div>
             </div>
           </div>
@@ -198,7 +199,6 @@
           </div>
         </div>
 
-          <div class="col-12 footer-title" style="height: 50px;">System Design and features for Dissertation study. <br> Develop By: Jherold Valdoz</div>
       </div>
   </div>
 </body>
