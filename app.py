@@ -509,7 +509,6 @@ def sub_LSTM(temp_df):
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
-
     #Need to use the resources of CPU
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device
@@ -640,7 +639,28 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-#    import matplotlib.pyplot as plt
+
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    import matplotlib.pyplot as plt
+
+
+
+    def lstm_confusionmatrix(model, test_data_x, test_data_y):
+        model.eval()
+        with torch.no_grad():
+            # Assuming X_test_tensor is your test data converted to a PyTorch tensor
+            logits = model(test_data_x)
+            _, predicted = torch.max(logits, 1)
+            cm = confusion_matrix(test_data_y, predicted.numpy())
+
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=None)
+            disp.plot(cmap=plt.cm.Blues)
+            plt.title('Confusion Matrix')
+            plt.show()
+
+    lstm_confusionmatrix(lstm_model, test_data_X, test_data_y)
+
+    #import matplotlib.pyplot as plt
     plt.figure(figsize = (10, 3))
     plt.subplot(1, 2, 1)
     plt.plot(epoch_train_accs, label='Train Accuracy')
@@ -657,8 +677,6 @@ def sub_LSTM(temp_df):
     plt.grid()
     plt.show()
 
-    #plt.savefig("static\HTML\images\LSTM_train_acc.png")
-    #plt.savefig("static\HTML\images\LSTM_test_acc.png")
     for layer in lstm_model.children():
         if hasattr(layer, 'reset_parameters'):
             layer.reset_parameters()
@@ -686,11 +704,12 @@ def sub_KMeans(gadgettype):
 
     return top_kmeans_reco.items(), k
 
-# def sub_evaluation_metrics():
-#     from sklearn.metrics import confusion_matrix
-#     from sklearn.metrics import classification_report
-#     print(confusion_matrix(y_test, y_pred))
-#     print(classification_report   (y_test, y_pred))
+def sub_evaluation_metrics(model, x_test, y_test):
+    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import classification_report
+    plot
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report   (y_test, y_pred))
 
 
 
