@@ -449,7 +449,6 @@ def sub_LSTM(temp_df):
     batch_size = 50
     epochs = 20
 
-
     #Tokenize all words in the dataframe
     temp_df["Reviews"] = temp_df["Reviews"].apply(word_tokenize)
 
@@ -558,7 +557,7 @@ def sub_LSTM(temp_df):
             sigmoid_out = sigmoid_out[:, -1] # get the output labels as a list
 
             # return last sigmoid output and hidden state
-            return sigmoid_out, hidden
+            return sigmoid_out, hidden 
 
     LSTM_INPUT_SIZE = embedding_size # size of the embeddings
     LSTM_HIDDEN_SIZE = 128
@@ -606,10 +605,8 @@ def sub_LSTM(temp_df):
         with torch.no_grad():
             for inputs, labels in test_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
-
                 outputs, val_h = model(inputs)
                 loss = criterion(outputs, labels)
-
                 test_losses.append(loss.item())
                 test_accuracy += accuracy(outputs, labels)
 
@@ -640,25 +637,23 @@ def sub_LSTM(temp_df):
         epoch_test_accs.append(epoch_test_acc)
 
 
-    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-    import matplotlib.pyplot as plt
-
-
-
-    def lstm_confusionmatrix(model, test_data_x, test_data_y):
-        model.eval()
+    def lstm_confusionmatrix():
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        import matplotlib.pyplot as plt
+        lstm_model.eval()
+        lstm_out, _ = lstm_model.lstm(test_data_X)
+        last_hidden = lstm_out[:, -1, :]
+        logits = lstm_model.fc(last_hidden)
+        #_, predicted = torch.max(logits, 1)
+    
         with torch.no_grad():
-            # Assuming X_test_tensor is your test data converted to a PyTorch tensor
-            logits = model(test_data_x)
             _, predicted = torch.max(logits, 1)
             cm = confusion_matrix(test_data_y, predicted.numpy())
-
             disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=None)
             disp.plot(cmap=plt.cm.Blues)
             plt.title('Confusion Matrix')
             plt.show()
-
-    lstm_confusionmatrix(lstm_model, test_data_X, test_data_y)
+    lstm_confusionmatrix()
 
     #import matplotlib.pyplot as plt
     plt.figure(figsize = (10, 3))
@@ -707,12 +702,8 @@ def sub_KMeans(gadgettype):
 def sub_evaluation_metrics(model, x_test, y_test):
     from sklearn.metrics import confusion_matrix
     from sklearn.metrics import classification_report
-    plot
     print(confusion_matrix(y_test, y_pred))
     print(classification_report   (y_test, y_pred))
-
-
-
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
