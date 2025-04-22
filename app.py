@@ -639,14 +639,13 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-
-    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-    import matplotlib.pyplot as plt
-
-
-
     def lstm_confusionmatrix(model, test_data_x, test_data_y):
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        import matplotlib.pyplot as plt
+
+        #Go to evaluation mode
         model.eval()
+
         with torch.no_grad():
             # Assuming X_test_tensor is your test data converted to a PyTorch tensor
             logits = model(test_data_x)
