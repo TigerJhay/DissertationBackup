@@ -636,24 +636,57 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
+    def plot_confusion_matrix_pytorch(y_true, y_pred, classes, title='Confusion Matrix', cmap=plt.cm.Blues):       
+        from sklearn.metrics import confusion_matrix, classification_report
+        """
+        This function prints and plots the confusion matrix for PyTorch predictions.
+        """
+        cm = confusion_matrix(y_true, y_pred)
+        plt.figure(figsize=(8, 8))
+        sns.heatmap(cm, annot=True, fmt='d', cmap=cmap, cbar=False,
+                    xticklabels=classes, yticklabels=classes)
+        plt.title(title)
+        plt.ylabel('True Label')
+        plt.xlabel('Predicted Label')
+        plt.show()
 
-    def lstm_confusionmatrix():
-        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    def evaluate_lstm_model_pytorch(model, test_loader, label_encoder=None, device='cpu'):
+        import numpy as np
         import matplotlib.pyplot as plt
-        lstm_model.eval()
-        lstm_out, _ = lstm_model.lstm(test_data_X)
-        last_hidden = lstm_out[:, -1, :]
-        logits = lstm_model.fc(last_hidden)
-        #_, predicted = torch.max(logits, 1)
-    
+        # import seaborn as sns
+        import torch
+        import torch.nn as nn
+        import torch.optim as optim
+        from torch.utils.data import DataLoader, TensorDataset
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import LabelEncoder
+ 
+        model.eval()  # Set the model to evaluation mode
+        all_preds = []
+        all_labels = []
+        
         with torch.no_grad():
-            _, predicted = torch.max(logits, 1)
-            cm = confusion_matrix(test_data_y, predicted.numpy())
-            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=None)
-            disp.plot(cmap=plt.cm.Blues)
-            plt.title('Confusion Matrix')
-            plt.show()
-    lstm_confusionmatrix()
+            for inputs, labels in test_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs, 1)
+                all_preds.extend(predicted.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+        
+        if label_encoder:
+            true_labels = label_encoder.inverse_transform(all_labels)
+            predicted_labels = label_encoder.inverse_transform(all_preds)
+            classes = label_encoder.classes_
+        else:
+            true_labels = np.array(all_labels)
+            predicted_labels = np.array(all_preds)
+            classes = np.unique(np.concatenate((true_labels, predicted_labels)))
+        
+    evaluate_lstm_model_pytorch(lstm_model,test_loader,)
+    print("Confusion Matrix:")
+    plot_confusion_matrix_pytorch(true_labels, predicted_labels, classes=classes)
+
 
     #import matplotlib.pyplot as plt
     plt.figure(figsize = (10, 3))
@@ -700,10 +733,25 @@ def sub_KMeans(gadgettype):
     return top_kmeans_reco.items(), k
 
 def sub_evaluation_metrics(model, x_test, y_test):
-    from sklearn.metrics import confusion_matrix
-    from sklearn.metrics import classification_report
-    print(confusion_matrix(y_test, y_pred))
-    print(classification_report   (y_test, y_pred))
+# Confusion Matrix to be updated
+    def lstm_confusionmatrix():
+            from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+            import matplotlib.pyplot as plt
+            lstm_model.eval()
+            lstm_out, _ = lstm_model.lstm(test_data_X)
+            last_hidden = lstm_out[:, -1, :]
+            logits = lstm_model.fc(last_hidden)
+            #_, predicted = torch.max(logits, 1)
+        
+            with torch.no_grad():
+                _, predicted = torch.max(logits, 1)
+                cm = confusion_matrix(test_data_y, predicted.numpy())
+                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=None)
+                disp.plot(cmap=plt.cm.Blues)
+                plt.title('Confusion Matrix')
+                plt.show()
+                
+    lstm_confusionmatrix()
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
