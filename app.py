@@ -636,35 +636,14 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-    def plot_confusion_matrix_pytorch(y_true, y_pred, classes, title='Confusion Matrix', cmap=plt.cm.Blues):       
-        from sklearn.metrics import confusion_matrix, classification_report
-        """
-        This function prints and plots the confusion matrix for PyTorch predictions.
-        """
-        cm = confusion_matrix(y_true, y_pred)
-        plt.figure(figsize=(8, 8))
-        sns.heatmap(cm, annot=True, fmt='d', cmap=cmap, cbar=False,
-                    xticklabels=classes, yticklabels=classes)
-        plt.title(title)
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
-        plt.show()
 
-    def evaluate_lstm_model_pytorch(model, test_loader, label_encoder=None, device='cpu'):
-        import numpy as np
-        import matplotlib.pyplot as plt
-        # import seaborn as sns
-        import torch
-        import torch.nn as nn
-        import torch.optim as optim
-        from torch.utils.data import DataLoader, TensorDataset
-        from sklearn.model_selection import train_test_split
-        from sklearn.preprocessing import LabelEncoder
- 
-        model.eval()  # Set the model to evaluation mode
-        all_preds = []
-        all_labels = []
-        
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    import matplotlib.pyplot as plt
+
+
+
+    def lstm_confusionmatrix(model, test_data_x, test_data_y):
+        model.eval()
         with torch.no_grad():
             for inputs, labels in test_loader:
                 inputs = inputs.to(device)
