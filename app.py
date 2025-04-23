@@ -161,9 +161,10 @@ def modelcomplete():
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    # brands = "Samsung"
-    # type = "Smartphone"
-    # model = "Galaxy S24+"
+    brands = "Samsung"
+    type = "Smartphone"
+    model = "Galaxy S24+"
+
     brands = session["brands"]
     type = session["type"]
     model = str(request.form["gadgetModel"])
@@ -433,7 +434,6 @@ def attrib_piechart(data_count):
     ax.set_title('Summary of User Gadget Reviews')
     ax.legend(title='Gadget Labels')
     plt.savefig(".\static\HTML\images\Summary_Graph.png")
-    #plt.show()
             
 def sub_LSTM(temp_df):   
 
@@ -492,25 +492,26 @@ def sub_LSTM(temp_df):
         
         return data_tensor
 
+
     train_data_X = convert_sequences_to_tensor(df_train['Reviews'].to_numpy(), SEQUENCE_LENGTH, embedding_size)
     train_data_y = torch.FloatTensor([int(d) for d in df_train['Rating'].to_numpy()])
-
     test_data_X = convert_sequences_to_tensor(df_test['Reviews'].to_numpy(), SEQUENCE_LENGTH, embedding_size)
     test_data_y = torch.FloatTensor([int(d) for d in df_test['Rating'].to_numpy()])
 
-    print("Example Sequence:")
-    print(train_data_X[0])
-    print("Example Label:")
-    print(train_data_y[0])
+    # print("Example Sequence:")
+    # print(train_data_X[0])
+    # print("Example Label:")
+    # print(train_data_y[0])
 
     train_data = TensorDataset(train_data_X, train_data_y)
     test_data = TensorDataset(test_data_X, test_data_y)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_data, batch_size=batch_size)
+
     #Need to use the resources of CPU
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    device
+    # device
         
     import torch.nn as nn
     class LSTMModel(nn.Module):
@@ -570,9 +571,7 @@ def sub_LSTM(temp_df):
     lr=0.001
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(lstm_model.parameters(), lr=lr)
-
-    #int(input("Enter value for epochs"))
-
+    
     def accuracy(pred, label):
         pred = torch.round(pred.squeeze())
         return torch.sum(pred == label.squeeze()).item()
@@ -636,53 +635,24 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
+    #CONFUSION MATRIX DISPLAY
+    evaluate_lstm_model_pytorch(lstm_model,test_loader,label_encoder=None, device='cpu')
 
-    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-    import matplotlib.pyplot as plt
-
-
-
-    def lstm_confusionmatrix(model, test_data_x, test_data_y):
-        model.eval()
-        with torch.no_grad():
-            for inputs, labels in test_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                outputs = model(inputs)
-                _, predicted = torch.max(outputs, 1)
-                all_preds.extend(predicted.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-        
-        if label_encoder:
-            true_labels = label_encoder.inverse_transform(all_labels)
-            predicted_labels = label_encoder.inverse_transform(all_preds)
-            classes = label_encoder.classes_
-        else:
-            true_labels = np.array(all_labels)
-            predicted_labels = np.array(all_preds)
-            classes = np.unique(np.concatenate((true_labels, predicted_labels)))
-        
-    evaluate_lstm_model_pytorch(lstm_model,test_loader,)
-    print("Confusion Matrix:")
-    plot_confusion_matrix_pytorch(true_labels, predicted_labels, classes=classes)
-
-
-    #import matplotlib.pyplot as plt
-    plt.figure(figsize = (10, 3))
-    plt.subplot(1, 2, 1)
-    plt.plot(epoch_train_accs, label='Train Accuracy')
-    plt.plot(epoch_test_accs, label='Test Accuracy')
-    plt.title("Train")
-    plt.legend()
-    plt.grid()
+    # plt.figure(figsize = (10, 3))
+    # plt.subplot(1, 2, 1)
+    # plt.plot(epoch_train_accs, label='Train Accuracy')
+    # plt.plot(epoch_test_accs, label='Test Accuracy')
+    # plt.title("Train")
+    # plt.legend()
+    # plt.grid()
    
-    plt.subplot(1, 2, 2)
-    plt.plot(epoch_train_losses, label='Train Loss')
-    plt.plot(epoch_test_losses, label='Test Loss')
-    plt.title("Test")
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # plt.subplot(1, 2, 2)
+    # plt.plot(epoch_train_losses, label='Train Loss')
+    # plt.plot(epoch_test_losses, label='Test Loss')
+    # plt.title("Test")
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
     for layer in lstm_model.children():
         if hasattr(layer, 'reset_parameters'):
@@ -690,6 +660,31 @@ def sub_LSTM(temp_df):
 
     return train_loss, train_accs, test_loss, test_accs
     # return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
+
+def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    import matplotlib.pyplot as plt
+    
+#    lstm_model.to(device)
+    lstm_model.eval()
+
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs, _ = lstm_model(inputs)
+            predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    # Compute confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.show()
 
 def sub_KMeans(gadgettype):
     #gadgettype = "Smartphone"
@@ -710,27 +705,6 @@ def sub_KMeans(gadgettype):
     top_kmeans_reco = sorted_ratings.head(k)
 
     return top_kmeans_reco.items(), k
-
-def sub_evaluation_metrics(model, x_test, y_test):
-# Confusion Matrix to be updated
-    def lstm_confusionmatrix():
-            from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-            import matplotlib.pyplot as plt
-            lstm_model.eval()
-            lstm_out, _ = lstm_model.lstm(test_data_X)
-            last_hidden = lstm_out[:, -1, :]
-            logits = lstm_model.fc(last_hidden)
-            #_, predicted = torch.max(logits, 1)
-        
-            with torch.no_grad():
-                _, predicted = torch.max(logits, 1)
-                cm = confusion_matrix(test_data_y, predicted.numpy())
-                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=None)
-                disp.plot(cmap=plt.cm.Blues)
-                plt.title('Confusion Matrix')
-                plt.show()
-                
-    lstm_confusionmatrix()
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
