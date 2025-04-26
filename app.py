@@ -647,6 +647,9 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
+
+
+
     #CONFUSION MATRIX DISPLAY
     evaluate_lstm_model_pytorch(lstm_model,test_loader,label_encoder=None, device='cpu')
 
@@ -656,6 +659,11 @@ def sub_LSTM(temp_df):
 
     return train_loss, train_accs, test_loss, test_accs
     # return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
+
+
+#--------------------------------------------------------------------
+# CONFUSION MATRIX, PRECISION, RECALL AND F1 SCORE
+#--------------------------------------------------------------------
 
 def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
@@ -684,6 +692,11 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
     disp.plot(cmap=plt.cm.Blues)
     plt.title("Confusion Matrix")
     plt.show()
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1:.4f}")
+
 
 def sub_KMeans(gadgettype):
     #gadgettype = "Smartphone"
