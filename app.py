@@ -137,6 +137,7 @@ def home():
                            dev_images = "/static/images/NIA.jpg")
 
 @app.route("/brandtype", methods=["GET", "POST"])
+
 def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
     mysqlconn.reconnect()
@@ -179,7 +180,7 @@ def modelrecommendation():
     attrib_table(temp_df)
     top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
-    attrib_piechart(summary_reco)
+    attrib_graph(summary_reco)
     airesult = sub_AIresult(item_desc)
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
@@ -409,24 +410,24 @@ def attrib_table(temp_df_attrib):
     def convert_to_matrix(gadget_model):
         df_model = df.loc[df["Model"].str.contains(gadget_model)]
         df_rev = df_model.loc[df_model["Reviews"].str.contains("battery")]
-        batt_rpos = df_rev["Rating"].value_counts().get("1",0)
-        batt_rneg = df_rev["Rating"].value_counts().get("0",0)
+        batt_rpos = df_rev["Rating"].value_counts().get(1,0)
+        batt_rneg = df_rev["Rating"].value_counts().get(0,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("screen")]
-        scr_rpos = df_rev["Rating"].value_counts().get("1",0)
-        scr_rneg = df_rev["Rating"].value_counts().get("0",0)
+        scr_rpos = df_rev["Rating"].value_counts().get(1,0)
+        scr_rneg = df_rev["Rating"].value_counts().get(0,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("speed")]
-        spd_rpos = df_rev["Rating"].value_counts().get("1",0)
-        spd_rneg = df_rev["Rating"].value_counts().get("0",0)
+        spd_rpos = df_rev["Rating"].value_counts().get(1,0)
+        spd_rneg = df_rev["Rating"].value_counts().get(0,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("memory")]
-        mem_rpos = df_rev["Rating"].value_counts().get("1",0)
-        mem_rneg = df_rev["Rating"].value_counts().get("0",0)
+        mem_rpos = df_rev["Rating"].value_counts().get(1,0)
+        mem_rneg = df_rev["Rating"].value_counts().get(0,0)
         
         df_rev = df_model.loc[df_model["Reviews"].str.contains("audio")]
-        aud_rpos = df_rev["Rating"].value_counts().get("1",0)
-        aud_rneg = df_rev["Rating"].value_counts().get("0",0)
+        aud_rpos = df_rev["Rating"].value_counts().get(1,0)
+        aud_rneg = df_rev["Rating"].value_counts().get(0,0)
 
         row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg, aud_rpos, aud_rneg]    
         return row_value
@@ -435,13 +436,11 @@ def attrib_table(temp_df_attrib):
         attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
     attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=True)
 
-def attrib_piechart(data_count):
+def attrib_graph(data_count):
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
-
     #data = [100, 27, 20, 1,1]
-
     gadgetnames = ['Battery', 'Screen', 'Speed', 'RAM', 'Audio']
     bar_labels = ['Battery', 'Screen', 'Speed', 'RAM','Audio']
     bar_colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange', 'tab:purple']
@@ -685,7 +684,7 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
     precision = precision_score(all_labels, all_preds)
     recall = recall_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds)
-
+    
     # Compute confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
@@ -699,15 +698,47 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
 
 
 def sub_KMeans(gadgettype):
-    #gadgettype = "Smartphone"
+    gadgettype = "Smartphone"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
-    #kmeans_df = kmeans_df.iloc[:10000,:]
+    # kmeans_df = kmeans_df.iloc[:10000,:]
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
     pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
-    num_clusters = 5  # Choose the number of clusters)    
+    num_clusters = 5  # Choose the number of clusters)
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
+    user_id = 12
+    user_cluster_label = cluster_labels[user_id - 1]
+    users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
+    average_ratings = pivot_table.loc[users_in_same_cluster].mean()
+    sorted_ratings = average_ratings.sort_values(ascending=False)
+    k = 4
+    top_kmeans_reco = sorted_ratings.head(k)
+
+    return top_kmeans_reco(), k
+
+def sub_KMeans_test(gadgettype):
+    from sklearn.metrics import confusion_matrix
+    from scipy.optimize import linear_sum_assignment
+    import seaborn as sns
+   
+    gadgettype = "Smartphone"
+    mysqlconn.reconnect()
+    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
+
+    kmeans_df = sub_datacleaning(kmeans_df)
+    df_reco = kmeans_df[["Rev_No",'Model', 'Rating', 'Reviews']]
+    pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
+
+
+    num_clusters = 5  # Choose the number of clusters)    
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    predicted_labels = kmeans.fit_predict(pivot_table)
+
+    # --- Assume ground truth labels are available ---
+    true_labels = kmeans_df.loc[pivot_table.index, "Rev_No"].values  # adjust column name if different
+
+
     user_id = 1
     user_cluster_label = cluster_labels[user_id - 1]
     users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
@@ -716,7 +747,75 @@ def sub_KMeans(gadgettype):
     k = 3
     top_kmeans_reco = sorted_ratings.head(k)
 
+    user_actual_ratings = pivot_table.loc[user_id].drop('Cluster', errors='ignore')
+    relevant_items = set(user_actual_ratings[user_actual_ratings >= 4].index)
+        # Items you recommended
+    recommended_items = set(top_kmeans_reco.index)
+
+    # True positives: recommended & relevant
+    true_positives = recommended_items & relevant_items
+
     return top_kmeans_reco.items(), k
+
+def sub_decision_tree():
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.metrics import classification_report
+
+    gadgettype = "Smartphone"
+    mysqlconn.reconnect()
+    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
+    kmeans_df.dropna(subset=["Reviews", "Rating", "Model"], inplace=True)
+    # Features could include user and item attributes
+    # features = kmeans_df[["Rating", "Reviews", "Model", "Type", "Brand"]]
+    # features = pd.get_dummies(features)  # Encode categorical variables
+
+    # Target: whether the user liked the item (1 or 0)
+    kmeans_df["Liked"] = kmeans_df["Rating"].astype(int)
+
+    # Encode 'Model' (categorical)
+    from sklearn.preprocessing import LabelEncoder
+    le_model = LabelEncoder()
+    kmeans_df["Model_encoded"] = le_model.fit_transform(kmeans_df["Model"])
+
+    # TF-IDF vectorize the Reviews
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    tfidf = TfidfVectorizer(stop_words="english", max_features=100)
+    review_features = tfidf.fit_transform(kmeans_df["Reviews"]).toarray()
+
+    features = np.hstack([review_features, kmeans_df[["Rating", "Model_encoded"]].values])
+
+    # Target variable
+    target = kmeans_df["Liked"]
+
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+    clf = DecisionTreeClassifier(max_depth=5, random_state=42)
+    clf.fit(X_train, y_train)
+
+    # Predict
+    y_pred = clf.predict(X_test)
+
+    # Evaluation
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    
+    
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2)
+
+    # Train decision tree
+    clf = DecisionTreeClassifier()
+    clf.fit(X_train, y_train)
+
+    # Predict
+    y_pred = clf.predict(X_test)
+
+    # features = pd.DataFrame(clf.feature_importances_, index=X_test)
+  
+    # Evaluation
+    print(classification_report(y_test, y_pred))
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
