@@ -1,4 +1,4 @@
-from flask import Blueprint, Flask, session, render_template, request, flash, jsonify, url_for
+from flask import Flask, session, render_template, request, flash, jsonify, url_for
 import google.generativeai as genai
 from io import StringIO
 import pandas as pd 
@@ -10,15 +10,14 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
-from matplotlib import pyplot as plt
-from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
+# from matplotlib import pyplot as plt
+# from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
 import mysql.connector
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import sqlalchemy as sqlalch
-import openai
 
+import openai
 import gc
 import torch
 gc.collect()
@@ -56,17 +55,14 @@ def addImageURL():
         imagepath = str(request.form["txturldisplay1"])
     else:
         imagepath= "./static/HTML/images/NIA.jpg"
-    
     if str(request.form["txturldisplay2"]) != "":
         imagepath2 = str(request.form["txturldisplay2"]) 
     else:
         imagepath2="./static/HTML/images/NIA.jpg"
-
     if str(request.form["txturldisplay3"]) != "":
         imagepath3 = str(request.form["txturldisplay3"]) 
     else:
-        imagepath3="./static/HTML/images/NIA.jpg"
-    
+        imagepath3="./static/HTML/images/NIA.jpg"    
     if str(request.form["txturldisplay4"]) != "":
         imagepath4 = str(request.form["txturldisplay4"]) 
     else:
@@ -79,9 +75,9 @@ def addImageURL():
     sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path,Path2,Path3,Path4) VALUES (%s,%s,%s,%s,%s,%s,%s)"    
     strvalue = (model, brand, type, imagepath,imagepath2,imagepath3,imagepath4,)
     cursor.execute(sqlstring, strvalue)
+    notif = "Image Uploaded"
     mysqlconn.commit()
     mysqlconn.close()
-    notif = "Image Uploaded"
     return render_template("newdataset.html", notif=notif)
 
 @app.route("/newdataset")
@@ -175,8 +171,13 @@ def modelrecommendation():
     mysqlconn.reconnect()
     sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'"
     temp_df = pd.read_sql(sqlstring, mysqlconn)
-
     temp_df = sub_datacleaning(temp_df)
+
+    sqlstring_cm = "SELECT * FROM gadget_reviews"
+    temp_df_cm = pd.read_sql(sqlstring_cm, mysqlconn)
+    temp_df_cm = sub_datacleaning(temp_df_cm)
+
+
     attrib_table(temp_df)
     top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
@@ -185,7 +186,7 @@ def modelrecommendation():
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
 
-    train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
+    train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df_cm)
     
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
@@ -450,6 +451,7 @@ def attrib_graph(data_count):
     ax.set_title('Summary of User Gadget Reviews')
     ax.legend(title='Gadget Labels')
     plt.savefig(".\static\HTML\images\Summary_Graph.png")
+    plt.close()
             
 def sub_LSTM(temp_df):   
 
@@ -485,7 +487,6 @@ def sub_LSTM(temp_df):
     #wv['_____'] the value inside wv is the value needed for prediction
     wordvector_model.wv[word2idx]
     # value = wordvector_model.wv.most_similar('bit', topn=3)
-    #print (value)
 
     #Embedding Matrix
     def convert_sequences_to_tensor(sequences, num_tokens_in_sequence, embedding_size):
@@ -537,9 +538,8 @@ def sub_LSTM(temp_df):
                 hidden_size = hidden_size,
                 num_layers = num_stacked_layers,
                 batch_first = True)
-
+            
             self.dropout = nn.Dropout(drop_prob) # randomly sets outputs of a tensor to 0 during training
-
             self.fc = nn.Linear(hidden_size, 1)
             self.sigmoid = nn.Sigmoid()
 
@@ -646,9 +646,9 @@ def sub_LSTM(temp_df):
         epoch_test_losses.append(epoch_test_loss)
         epoch_test_accs.append(epoch_test_acc)
 
-
-
-
+    # TESTING AND TRAINING GRAPH
+    evaluate_lstm_test_train_result(epoch_train_accs,epoch_test_accs,epoch_train_losses, epoch_test_losses)
+    
     #CONFUSION MATRIX DISPLAY
     evaluate_lstm_model_pytorch(lstm_model,test_loader,label_encoder=None, device='cpu')
 
@@ -657,16 +657,35 @@ def sub_LSTM(temp_df):
             layer.reset_parameters()
 
     return train_loss, train_accs, test_loss, test_accs
-    # return epoch_train_losses, epoch_train_accs, epoch_test_losses, epoch_test_accs
-
 
 #--------------------------------------------------------------------
 # CONFUSION MATRIX, PRECISION, RECALL AND F1 SCORE
 #--------------------------------------------------------------------
+def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_train_losses, epoch_test_losses):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize = (10, 3))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epoch_train_accs, label='Train Accuracy')
+    plt.plot(epoch_test_accs, label='Test Accuracy')
+    plt.title("Accuracy")
+    plt.legend()
+    plt.grid()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epoch_train_losses, label='Train Loss')
+    plt.savefig("static\HTML\images\LSTM_train_acc.png")
+    plt.plot(epoch_test_losses, label='Test Loss')
+    plt.savefig("static\HTML\images\LSTM_test_acc.png")
+    plt.title("Loss")
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
     import matplotlib.pyplot as plt
+    import seaborn as sns
     lstm_model.to(device)
     lstm_model.eval()
     all_preds = []
@@ -687,15 +706,24 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
     
     # Compute confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title("Confusion Matrix")
+
+    #Convert Values into percent
+    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")   
+    ax.set_title("Confusion Matrix for LSTM Model")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    
+    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    # disp.plot(cmap=plt.cm.Blues)
+    # plt.title("Confusion Matrix")
+    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
     plt.show()
 
     print(f"Precision: {precision:.4f}")
     print(f"Recall:    {recall:.4f}")
     print(f"F1 Score:  {f1:.4f}")
-
 
 def sub_KMeans(gadgettype):
     mysqlconn.reconnect()
@@ -715,16 +743,16 @@ def sub_KMeans(gadgettype):
     k = 4
     top_kmeans_reco = sorted_ratings.head(k)
 
-    return top_kmeans_reco(), k
-
+    return top_kmeans_reco.items(), k
 
 def sub_decision_tree(gadgettype):
-    from sklearn.tree import DecisionTreeClassifier, plot_tree
+    from sklearn.tree import DecisionTreeClassifier
     from sklearn.model_selection import train_test_split
     from sklearn.feature_extraction.text import CountVectorizer
     import matplotlib.pyplot as plt
-    from scipy.sparse import hstack
-    from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+
+    import seaborn as sns
+    from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 
     mysqlconn.reconnect()
     # dectree_df = pd.read_sql("SELECT * FROM gadget_reviews WHERE Type = '" + gadgettype + "'", mysqlconn)
@@ -742,24 +770,31 @@ def sub_decision_tree(gadgettype):
 
     y_pred = dtc.predict(X_test)
     cm = confusion_matrix(y_test, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Not Recommend", "Recommend"])
-    disp.plot(cmap='Blues')
-    plt.title("Confusion Matrix")
+
+    #Convert Values into percent
+    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")    
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix for Decision Tree (%)")
+    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
     plt.show()
+    
+    # disp = ConfusionMatrixDisplay(confusion_matrix=cm_percent, display_labels=["Not Recommend", "Recommend"])
+    # disp.plot(cmap='Blues')
+    # plt.title("Confusion Matrix Decision Tree")
+    # plt.show()
 
     # Precision, Recall, F1 Score
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
 
-    print(f"Precision: {precision:.3f}")
-    print(f"Recall: {recall:.3f}")
-    print(f"F1 Score: {f1:.3f}")
-
-#need this line to access HTML files inside templates folder
-#app = Flask(__name__)
-#app.register_blueprint(views, url_prefix = "/")
-#this secret_key does not matter, it is just from avoiding error during execution
+    print(f"Precision: {precision:.3%}")
+    print(f"Recall: {recall:.3%}")
+    print(f"F1 Score: {f1:.3%}")
 
 app.secret_key = "abcdef12345"
 if __name__ == "__main__":
