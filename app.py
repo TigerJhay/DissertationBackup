@@ -698,13 +698,13 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
 
 
 def sub_KMeans(gadgettype):
-    gadgettype = "Smartphone"
     mysqlconn.reconnect()
     kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
-    # kmeans_df = kmeans_df.iloc[:10000,:]
+    kmeans_df = kmeans_df.iloc[:10000,:]
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
+
     pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
-    num_clusters = 5  # Choose the number of clusters)
+    num_clusters = 3  # Choose the number of clusters)
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
     user_id = 12
@@ -717,105 +717,44 @@ def sub_KMeans(gadgettype):
 
     return top_kmeans_reco(), k
 
-def sub_KMeans_test(gadgettype):
-    from sklearn.metrics import confusion_matrix
-    from scipy.optimize import linear_sum_assignment
-    import seaborn as sns
-   
-    gadgettype = "Smartphone"
+
+def sub_decision_tree(gadgettype):
+    from sklearn.tree import DecisionTreeClassifier, plot_tree
+    from sklearn.model_selection import train_test_split
+    from sklearn.feature_extraction.text import CountVectorizer
+    import matplotlib.pyplot as plt
+    from scipy.sparse import hstack
+    from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+
     mysqlconn.reconnect()
-    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
+    # dectree_df = pd.read_sql("SELECT * FROM gadget_reviews WHERE Type = '" + gadgettype + "'", mysqlconn)
+    dectree_df = pd.read_sql("SELECT * FROM gadget_reviews", mysqlconn)
+    dectree_df = sub_datacleaning(dectree_df)
+    X  = dectree_df["Reviews"]
 
-    kmeans_df = sub_datacleaning(kmeans_df)
-    df_reco = kmeans_df[["Rev_No",'Model', 'Rating', 'Reviews']]
-    pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
+    countvector = CountVectorizer()
+    X = countvector.fit_transform(dectree_df["Reviews"])
+    y = dectree_df["Rating"].astype("float16")
 
+    X_train, X_test, y_train, y_test = train_test_split(X,y, random_state=42, test_size=.2)
+    dtc = DecisionTreeClassifier()
+    dtc.fit(X_train, y_train)
 
-    num_clusters = 5  # Choose the number of clusters)    
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-    predicted_labels = kmeans.fit_predict(pivot_table)
+    y_pred = dtc.predict(X_test)
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Not Recommend", "Recommend"])
+    disp.plot(cmap='Blues')
+    plt.title("Confusion Matrix")
+    plt.show()
 
-    # --- Assume ground truth labels are available ---
-    true_labels = kmeans_df.loc[pivot_table.index, "Rev_No"].values  # adjust column name if different
+    # Precision, Recall, F1 Score
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
-
-    user_id = 1
-    user_cluster_label = cluster_labels[user_id - 1]
-    users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
-    average_ratings = pivot_table.loc[users_in_same_cluster].mean()
-    sorted_ratings = average_ratings.sort_values(ascending=False)
-    k = 3
-    top_kmeans_reco = sorted_ratings.head(k)
-
-    user_actual_ratings = pivot_table.loc[user_id].drop('Cluster', errors='ignore')
-    relevant_items = set(user_actual_ratings[user_actual_ratings >= 4].index)
-        # Items you recommended
-    recommended_items = set(top_kmeans_reco.index)
-
-    # True positives: recommended & relevant
-    true_positives = recommended_items & relevant_items
-
-    return top_kmeans_reco.items(), k
-
-def sub_decision_tree():
-    from sklearn.tree import DecisionTreeClassifier
-    from sklearn.metrics import classification_report
-
-    gadgettype = "Smartphone"
-    mysqlconn.reconnect()
-    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
-    kmeans_df.dropna(subset=["Reviews", "Rating", "Model"], inplace=True)
-    # Features could include user and item attributes
-    # features = kmeans_df[["Rating", "Reviews", "Model", "Type", "Brand"]]
-    # features = pd.get_dummies(features)  # Encode categorical variables
-
-    # Target: whether the user liked the item (1 or 0)
-    kmeans_df["Liked"] = kmeans_df["Rating"].astype(int)
-
-    # Encode 'Model' (categorical)
-    from sklearn.preprocessing import LabelEncoder
-    le_model = LabelEncoder()
-    kmeans_df["Model_encoded"] = le_model.fit_transform(kmeans_df["Model"])
-
-    # TF-IDF vectorize the Reviews
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    tfidf = TfidfVectorizer(stop_words="english", max_features=100)
-    review_features = tfidf.fit_transform(kmeans_df["Reviews"]).toarray()
-
-    features = np.hstack([review_features, kmeans_df[["Rating", "Model_encoded"]].values])
-
-    # Target variable
-    target = kmeans_df["Liked"]
-
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
-
-    clf = DecisionTreeClassifier(max_depth=5, random_state=42)
-    clf.fit(X_train, y_train)
-
-    # Predict
-    y_pred = clf.predict(X_test)
-
-    # Evaluation
-    print("Classification Report:")
-    print(classification_report(y_test, y_pred))
-
-    
-    
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2)
-
-    # Train decision tree
-    clf = DecisionTreeClassifier()
-    clf.fit(X_train, y_train)
-
-    # Predict
-    y_pred = clf.predict(X_test)
-
-    # features = pd.DataFrame(clf.feature_importances_, index=X_test)
-  
-    # Evaluation
-    print(classification_report(y_test, y_pred))
+    print(f"Precision: {precision:.3f}")
+    print(f"Recall: {recall:.3f}")
+    print(f"F1 Score: {f1:.3f}")
 
 #need this line to access HTML files inside templates folder
 #app = Flask(__name__)
