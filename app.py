@@ -130,7 +130,9 @@ def home():
     mysqlconn.close()
     return render_template("index.html", 
                            brands = brands.to_numpy(),
-                           dev_images = "/static/images/NIA.jpg")
+                           dev_images = "/static/HTML/images/NIA.jpg",
+                           summary_graph = "/static/HTML/images/NIA.jpg"
+                           )
 
 @app.route("/brandtype", methods=["GET", "POST"])
 
@@ -160,7 +162,8 @@ def modelcomplete():
 def modelrecommendation():
     brands = session["brands"]
     type = session["type"]
-    model = str(request.form["gadgetModel"])
+    model = session["model"]
+    # model = str(request.form["gadgetModel"])
 
     # brands = "Google"
     # type = "Smartphone"
@@ -186,8 +189,8 @@ def modelrecommendation():
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
 
-    train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df_cm)
-    
+    # train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df_cm)
+    train_loss, train_accs, test_loss, test_accs = 0, 0, 0, 0
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
                         dev_images1 = dev_images1,
@@ -204,8 +207,10 @@ def modelrecommendation():
                         epoch_train_losses = train_loss,
                         epoch_train_accs = train_accs,
                         epoch_test_losses = test_loss,
-                        epoch_test_accs = test_accs
+                        epoch_test_accs = test_accs,
+                        summary_graph = "./static/HTML/images/Summary_Graph.png"
                         )
+
 def reset_weights(model):
     for layer in model.children():
         if hasattr(layer, 'reset_parameters'):
