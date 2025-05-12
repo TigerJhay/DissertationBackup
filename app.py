@@ -71,11 +71,13 @@ def addImageURL():
     brand =  session["ndsbrands"]
     type = session["ndstype"]
     model = session["ndsmodel"]
+    mysqlconn.reconnect()
     cursor = mysqlconn.cursor()
     sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path,Path2,Path3,Path4) VALUES (%s,%s,%s,%s,%s,%s,%s)"    
+    print (sqlstring)
     strvalue = (model, brand, type, imagepath,imagepath2,imagepath3,imagepath4,)
     cursor.execute(sqlstring, strvalue)
-    notif = "Image Uploaded"
+    notif = "Image Uploaded and save to database"
     mysqlconn.commit()
     mysqlconn.close()
     return render_template("newdataset.html", notif=notif)

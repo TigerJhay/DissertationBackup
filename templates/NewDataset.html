@@ -11,17 +11,21 @@
             <script>
               function validateImgURL()
               {
-
                 const myform = document.forms["imgURLUpload"];
+                const form = document.getElementById('imgURLUpload');
                 const urlImg1 = myform.txturldisplay1.value;
                 const urlImg2 = myform.txturldisplay2.value;
                 const urlImg3 = myform.txturldisplay3.value;
                 const urlImg4 = myform.txturldisplay4.value;
                 
-                if (urlImg1 == ""){
-                  alert("No image URL is placed in image 1");
+                if (confirm("image URL should have values \n If no URL values where place, it will saved the blank field.") == true){
+                  form.action = "imgURLUpload";
+                  form.submit();
+                  alert("Go to action")
                 }
-
+                else{
+                  alert("Process has been Cancelled");
+                }
               }
             </script>      
     </head>
@@ -138,7 +142,7 @@
               </div>
                 <!-- End Panel -->
 
-                <form name="imgURLUpload" action="/imgURLUpload" method="POST">
+                <form name="imgURLUpload" action="/imgURLUpload" method="POST" ID="imgURLUpload">
                   <!-- <div class="cust_uploadfile d-inline" id="cust_drop-area-container">
                     <label for="cust_input-file" id="cust_drop-area">
                         <div id="cust_image-preview"></div>
@@ -161,7 +165,7 @@
                   </div>
                   <br>
                   <div class="my-0"><h6>
-                    Upload image URL for:{{selectbrand}} {{selectedtype}} {{selectedmodel}}</h6>
+                    Upload image URL for:{{selectbrand}} {{selectedtype}} {{selectedmodel}} - {{notif}}</h6> 
                   </div>
                 </form>  
                 <input type="button" onclick="validateImgURL()" class="btn btn-secondary w-100 px-1" value="Upload all images ">  
