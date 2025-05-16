@@ -191,8 +191,8 @@ def modelrecommendation():
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
 
-    # train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df_cm)
-    train_loss, train_accs, test_loss, test_accs = 0, 0, 0, 0
+    train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df_cm)
+    evaluate_lstm_test_train_result(train_accs, test_accs, train_loss, test_loss)
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
                         dev_images1 = dev_images1,
@@ -583,7 +583,7 @@ def sub_LSTM(temp_df):
     LSTM_NUM_STACKED_LAYERS = 2
 
     lstm_model = LSTMModel(LSTM_INPUT_SIZE, LSTM_HIDDEN_SIZE, LSTM_NUM_STACKED_LAYERS)
-    # lstm_model.to(device)
+    lstm_model.to(device)
     # print(lstm_model)
 
     lr=0.001
@@ -610,7 +610,7 @@ def sub_LSTM(temp_df):
             train_losses.append(loss.item())
             train_accuracy += accuracy(outputs, labels)
 
-            epoch_train_loss = np.mean(train_losses)
+            epoch_train_loss = np.mean(train_losses) * 100.00
             epoch_train_acc = (train_accuracy/len(train_loader.dataset))*100.0
         return (epoch_train_loss, epoch_train_acc)
 
@@ -627,7 +627,7 @@ def sub_LSTM(temp_df):
                 test_losses.append(loss.item())
                 test_accuracy += accuracy(outputs, labels)
 
-        epoch_test_loss = np.mean(test_losses)
+        epoch_test_loss = np.mean(test_losses) * 100.0
         epoch_test_accuracy = (test_accuracy/len(test_loader.dataset))*100.0
 
         return (epoch_test_loss, epoch_test_accuracy)
@@ -675,7 +675,9 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
     plt.subplot(1, 2, 1)
     plt.plot(epoch_train_accs, label='Train Accuracy')
     plt.plot(epoch_test_accs, label='Test Accuracy')
-    plt.title("Accuracy")
+    plt.title("Train and Test Accuracy of LSTM model")
+    plt.ylabel("Accuracy Percentage")
+    plt.xlabel("No. of Epochs")
     plt.legend()
     plt.grid()
 
@@ -684,7 +686,9 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
     plt.savefig("static\HTML\images\LSTM_train_acc.png")
     plt.plot(epoch_test_losses, label='Test Loss')
     plt.savefig("static\HTML\images\LSTM_test_acc.png")
-    plt.title("Loss")
+    plt.title("Train and Test Losses of LSTM Model")
+    plt.ylabel("Loss Percentage")
+    plt.xlabel("No. of Epochs")
     plt.legend()
     plt.grid()
     plt.show()
