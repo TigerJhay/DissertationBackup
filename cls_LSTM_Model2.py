@@ -101,7 +101,7 @@ def sub_datacleaning(temp_df):
     return temp_df
 
 # This will train/test all record in the database
-sqlstring_cm = "SELECT * FROM gadget_reviews where brand='Samsung'"
+sqlstring_cm = "SELECT Revie FROM gadget_reviews where brand='Samsung'"
 temp_df_cm = pd.read_sql(sqlstring_cm, mysqlconn)
 temp_df_cm = sub_datacleaning(temp_df_cm)
 
