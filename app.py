@@ -28,35 +28,56 @@ app = Flask(__name__)
 mysqlconn = mysql.connector.connect(host="localhost", user="root", password="", database="dbmain_dissertation")
 sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', pool_recycle=1800)
 
-class ProductLSTM(nn.Module):
-    def __init__(self, vocab_size, embed_dim, hidden_dim):
-        super().__init__()
-        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
-        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
-        self.fc1 = nn.Linear(hidden_dim + 1, 64)
-        self.fc2 = nn.Linear(64, 1)
-
-    def forward(self, x, rating):
-        embedded = self.embed(x)
-        _, (h_n, _) = self.lstm(embedded)
-        h_n = h_n.squeeze(0)
-        combined = torch.cat((h_n, rating.unsqueeze(1)), dim=1)
-        out = torch.relu(self.fc1(combined))
-        return torch.sigmoid(self.fc2(out))
-    
 MAX_LEN = 30
 
-@app.route("/generaterecomendation", methods=["GET", "POST"])
+def sub_datacleaning_reco(temp_df):
+    # custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
 
-# -------------------------------------------------- 
-# For Index.html
-# --------------------------------------------------
+    #Remove Column Username since this column is unnecessary
+    temp_df["Reviews"] = temp_df["Reviews"].str.lower()
+
+    # All records with not value for REVIEWS will be dropped
+    if temp_df["Reviews"].isnull().values.any() == True:
+        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+
+    # Replace all special characters into black spaces which will also be remove
+    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
+    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r"x000D", '', regex=True)
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)        
+    temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True) #Eto
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
+
+    def tokenize_reviews(review_text):
+        review_sentence = word_tokenize(review_text)
+        return review_sentence
+    temp_df['Reviews'] = temp_df['Reviews'].apply(tokenize_reviews)
+
+    def lemmatize_review(review_text):
+        lemmatizer = WordNetLemmatizer()
+        lemmatize_words = [lemmatizer.lemmatize(word) for word in review_text]
+        lemmatize_text = ' '.join(lemmatize_words)
+        return lemmatize_text
+
+    temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)    
+    temp_df["Reviews"].replace('', None, inplace=True)
+    
+    if temp_df["Reviews"].isnull().values.any():
+        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+    
+    # temp_df["Rating"] = temp_df["Rating"].astype(str)
+    temp_df["Rating"] = temp_df["Rating"].astype(int)
+    temp_df = temp_df.drop(temp_df[temp_df["Rating"]==3].index, inplace=False)
+    return temp_df
 
 def load_models(vocab_size, embed_size, hidden_size):
     model = ProductLSTM(vocab_size,embed_size, hidden_size)     #vocab, 64 , 128
     model.load_state_dict(torch.load('saved_weights_model2.pt'))
     model.eval() # Set to evaluation mode
     print ("Properly Loaded")
+    return model
 
 def tokenize(sentence):
     return word_tokenize(sentence.lower())
@@ -72,7 +93,6 @@ def encode_sentence(sentence):
     return ids + [0] * (MAX_LEN - len(ids))
 
 def predict_for_product(df, model, product_name):
-    # product_name = "tab m9"  # You can remove this if product_name is passed as an argument
 
     # Collect all reviews for this product
     product_reviews = [
@@ -94,51 +114,75 @@ def predict_for_product(df, model, product_name):
     avg_score = sum(predictions) / len(predictions)
     return "Recommend" if avg_score >= 0.5 else "Not Recommend"
 
+class ProductLSTM(nn.Module):
+    def __init__(self, vocab_size, embed_dim, hidden_dim):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
+        self.fc1 = nn.Linear(hidden_dim + 1, 64)
+        self.fc2 = nn.Linear(64, 1)
+
+    def forward(self, x, rating):
+        embedded = self.embed(x)
+        _, (h_n, _) = self.lstm(embedded)
+        h_n = h_n.squeeze(0)
+        combined = torch.cat((h_n, rating.unsqueeze(1)), dim=1)
+        out = torch.relu(self.fc1(combined))
+        return torch.sigmoid(self.fc2(out))
+    
+mysqlconn.reconnect()
+sqlstring_reco = "SELECT * FROM gadget_reviews"
+temp_df = pd.read_sql(sqlstring_reco, mysqlconn)    
+df = sub_datacleaning_reco(temp_df)
+
+df['Recommend'] = ''
+df.loc[df['Rating'] >= 4, 'Recommend'] = "Recommend"
+df.loc[df['Rating'] <= 2, 'Recommend'] = "Not Recommend"
+label2id = {"Recommend": 1, "Not Recommend": 0}
+id2label = {1: "Recommend", 0: "Not Recommend"}
+df2= df[['Reviews', 'Rating','Model', 'Recommend']]
+
+vocab = set()
+for reviews in df['Reviews']:
+    vocab.update(tokenize(reviews))
+for model1 in df['Model']:
+    vocab.update(tokenize(model1))
+
+word2idx = {word: i+1 for i, word in enumerate(vocab)}  # reserve 0 for padding
+word2idx["<PAD>"] = 0
+
+model = load_models(len(word2idx), 64, 128)
+
+@app.route("/generaterecomendation", methods=["GET", "POST"])
+
+# -------------------------------------------------- 
+# For Index.html
+# --------------------------------------------------
+
+
 def modelrecommendation():
     brands = session["brands"]
     type = session["type"]
-    model = session["model"]
+    gadgetmodel = session["model"]
 
-    complete_gadget = brands + " " + type + " " + model
-    item_desc = brands +  " " + model
+    complete_gadget = brands + " " + type + " " + gadgetmodel
+    item_desc = brands +  " " + gadgetmodel
     mysqlconn.reconnect()
-    sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+model+"'"
+    sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+gadgetmodel + "'"
     temp_df = pd.read_sql(sqlstring, mysqlconn)
-    df = sub_datacleaning(temp_df)
+    temp_df = sub_datacleaning(temp_df)
     
-    mysqlconn.reconnect()
-    sqlstring_reco = "SELECT * FROM gadget_reviews"
-    temp_df = pd.read_sql(sqlstring_reco, mysqlconn)    
-    df = sub_datacleaning_reco(temp_df)
-
-    df['Recommend'] = ''
-    df.loc[df['Rating'] >= 4, 'Recommend'] = "Recommend"
-    df.loc[df['Rating'] <= 2, 'Recommend'] = "Not Recommend"
-    label2id = {"Recommend": 1, "Not Recommend": 0}
-    id2label = {1: "Recommend", 0: "Not Recommend"}
-    df2= df[['Reviews', 'Rating','Model', 'Recommend']]
-
-    vocab = set()
-    for reviews in df['Reviews']:
-        vocab.update(tokenize(reviews))
-    for model1 in df['Model']:
-        vocab.update(tokenize(model1))
-    word2idx = {word: i+1 for i, word in enumerate(vocab)}  # reserve 0 for padding
-    word2idx["<PAD>"] = 0
-
-    load_models(len(word2idx), 64, 128)
-
     # Run Inference
-    product_input = session["model"] #gadget model ito
+    product_input = gadgetmodel #gadget model ito
     result = predict_for_product(df2, model, product_input)
-    str_result_reco = result + "TEST MESSAGE"   
+    str_result_reco ="Based on the Reviews and Rating from different users, this gadget is: " + result   
 
     attrib_table(temp_df)
     top_reco, k_count = sub_KMeans(type)
-    summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(model)
+    summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(gadgetmodel)
     attrib_graph(summary_reco)
     airesult = sub_AIresult(item_desc)
-    dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(model, type, brands)
+    dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
 
     # train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
@@ -164,7 +208,6 @@ def modelrecommendation():
                         epoch_test_accs = test_accs,
                         summary_graph = "./static/HTML/images/Summary_Graph.png"
                         )
-
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
 
@@ -450,50 +493,6 @@ def sub_datacleaning(temp_df):
         temp_df = temp_df.drop(temp_df[temp_df["Rating"]==3].index, inplace=False)
         return temp_df
 
-def sub_datacleaning_reco(temp_df):
-    # custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
-
-    #Remove Column Username since this column is unnecessary
-    temp_df["Reviews"] = temp_df["Reviews"].str.lower()
-
-    # All records with not value for REVIEWS will be dropped
-    if temp_df["Reviews"].isnull().values.any() == True:
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-
-    # Replace all special characters into black spaces which will also be remove
-    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
-    temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r"x000D", '', regex=True)
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)        
-    temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True) #Eto
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
-
-    def tokenize_reviews(review_text):
-        review_sentence = word_tokenize(review_text)
-        return review_sentence
-    temp_df['Reviews'] = temp_df['Reviews'].apply(tokenize_reviews)
-
-    def lemmatize_review(review_text):
-        lemmatizer = WordNetLemmatizer()
-        lemmatize_words = [lemmatizer.lemmatize(word) for word in review_text]
-        lemmatize_text = ' '.join(lemmatize_words)
-        return lemmatize_text
-
-    temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)    
-    temp_df["Reviews"].replace('', None, inplace=True)
-    
-    if temp_df["Reviews"].isnull().values.any():
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-    
-    # temp_df["Rating"] = temp_df["Rating"].astype(str)
-    temp_df["Rating"] = temp_df["Rating"].astype(int)
-    temp_df = temp_df.drop(temp_df[temp_df["Rating"]==3].index, inplace=False)
-    return temp_df
-
-
-
 def attrib_table(temp_df_attrib):
     
     #--------------------------------------------------------------------------------------------
@@ -577,78 +576,76 @@ def attrib_graph(data_count):
     plt.savefig(".\static\HTML\images\Summary_Graph.png")
     plt.close()
 
-
-
 #--------------------------------------------------------------------
 # CONFUSION MATRIX, PRECISION, RECALL AND F1 SCORE
 #--------------------------------------------------------------------
-# def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_train_losses, epoch_test_losses):
-#     import matplotlib.pyplot as plt
-#     fig = plt.figure(figsize = (10, 3))
+def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_train_losses, epoch_test_losses):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize = (10, 3))
 
-#     plt.subplot(1, 2, 1)
-#     plt.plot(epoch_train_accs, label='Train Accuracy')
-#     plt.plot(epoch_test_accs, label='Test Accuracy')
-#     plt.title("Train and Test Accuracy of LSTM model")
-#     plt.ylabel("Accuracy Percentage")
-#     plt.xlabel("No. of Epochs")
-#     plt.legend()
-#     plt.grid()
+    plt.subplot(1, 2, 1)
+    plt.plot(epoch_train_accs, label='Train Accuracy')
+    plt.plot(epoch_test_accs, label='Test Accuracy')
+    plt.title("Train and Test Accuracy of LSTM model")
+    plt.ylabel("Accuracy Percentage")
+    plt.xlabel("No. of Epochs")
+    plt.legend()
+    plt.grid()
 
-#     plt.subplot(1, 2, 2)
-#     plt.plot(epoch_train_losses, label='Train Loss')
-#     plt.savefig("static\HTML\images\LSTM_train_acc.png")
-#     plt.plot(epoch_test_losses, label='Test Loss')
-#     plt.savefig("static\HTML\images\LSTM_test_acc.png")
-#     plt.title("Train and Test Losses of LSTM Model")
-#     plt.ylabel("Loss Percentage")
-#     plt.xlabel("No. of Epochs")
-#     plt.legend()
-#     plt.grid()
-#     plt.show()
+    plt.subplot(1, 2, 2)
+    plt.plot(epoch_train_losses, label='Train Loss')
+    plt.savefig("static\HTML\images\LSTM_train_acc.png")
+    plt.plot(epoch_test_losses, label='Test Loss')
+    plt.savefig("static\HTML\images\LSTM_test_acc.png")
+    plt.title("Train and Test Losses of LSTM Model")
+    plt.ylabel("Loss Percentage")
+    plt.xlabel("No. of Epochs")
+    plt.legend()
+    plt.grid()
+    plt.show()
 
-# def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
-#     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
-#     import matplotlib.pyplot as plt
-#     import seaborn as sns
-#     lstm_model.to(device)
-#     lstm_model.eval()
-#     all_preds = []
-#     all_labels = []
+def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    lstm_model.to(device)
+    lstm_model.eval()
+    all_preds = []
+    all_labels = []
 
-#     with torch.no_grad():
-#         for inputs, labels in test_loader:
-#             inputs, labels = inputs.to(device), labels.to(device)
-#             outputs, _ = lstm_model(inputs)
-#             predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
-#             all_preds.extend(predicted.cpu().numpy())
-#             all_labels.extend(labels.cpu().numpy())
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs, _ = lstm_model(inputs)
+            predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
-#     # Precision, Recall, F1 Score
-#     precision = precision_score(all_labels, all_preds)
-#     recall = recall_score(all_labels, all_preds)
-#     f1 = f1_score(all_labels, all_preds)
+    # Precision, Recall, F1 Score
+    precision = precision_score(all_labels, all_preds)
+    recall = recall_score(all_labels, all_preds)
+    f1 = f1_score(all_labels, all_preds)
     
-#     # Compute confusion matrix
-#     cm = confusion_matrix(all_labels, all_preds)
+    # Compute confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
 
-#     #Convert Values into percent
-#     cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-#     ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")   
-#     ax.set_title("Confusion Matrix for LSTM Model")
-#     ax.set_xlabel("Predicted")
-#     ax.set_ylabel("Actual")
+    #Convert Values into percent
+    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")   
+    ax.set_title("Confusion Matrix for LSTM Model")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
     
-#     #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
-#     # disp.plot(cmap=plt.cm.Blues)
-#     # plt.title("Confusion Matrix")
-#     plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
-#     plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
-#     plt.show()
+    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    # disp.plot(cmap=plt.cm.Blues)
+    # plt.title("Confusion Matrix")
+    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.show()
 
-#     print(f"Precision: {precision:.4f}")
-#     print(f"Recall:    {recall:.4f}")
-#     print(f"F1 Score:  {f1:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1:.4f}")
 
 def sub_KMeans(gadgettype):
     mysqlconn.reconnect()
