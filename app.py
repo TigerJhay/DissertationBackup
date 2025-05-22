@@ -3,168 +3,126 @@ import google.generativeai as genai
 from io import StringIO
 import pandas as pd 
 import numpy as np
-from numpy import array
-import nltk
-from nltk.corpus import stopwords
+import nltk 
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
-# from matplotlib import pyplot as plt
-# from matplotlib.dates import MonthLocator, DateFormatter, YearLocator
 lemmatizer = WordNetLemmatizer()
-import mysql.connector
-from sqlalchemy import create_engine
-import sqlalchemy as sqlalch
 import gc
 import torch
 import torch.nn as nn
-gc.collect()
+import joblib 
+import json
+from functools import lru_cache
+import sqlalchemy as sqlalch
+from sqlalchemy import text, create_engine
+import  mysql.connector
+nltk.download('punkt')
 nltk.download('wordnet')
-nltk.download('punkt_tab')
-nltk.download('omw-1.4')
+nltk.download('omw-1.4') 
+
+gc.collect()
 
 app = Flask(__name__)
+app.secret_key = "abcdef12345"
+
+#Initialize SQL constructor
 mysqlconn = mysql.connector.connect(host="localhost", user="root", password="", database="dbmain_dissertation")
 sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', pool_recycle=1800)
 
+#Decision Tree Algo Loading and getting values
+dtc = joblib.load("DT_Model2.pkl")
+countvector = joblib.load("DT_Vector2.pkl")
+
+#Load Vocabulary
+with open('vocab.json', 'r') as f:
+    vocab = json.load(f)
+
+#Load LSTM Model
+class LSTMClassifier(nn.Module):
+    def __init__(self, vocab_size, embed_dim, hidden_dim):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, 1)
+
+    def forward(self, x):
+        x = self.embedding(x)
+        _, (h_n, _) = self.lstm(x)
+        h_n = h_n.squeeze(0)
+        out = torch.sigmoid(self.fc(h_n)).view(-1)
+        return out
+    
+lstm_model = LSTMClassifier(vocab_size=len(vocab), embed_dim=32, hidden_dim=64)
+lstm_model.load_state_dict(torch.load("lstm_model2.pt", map_location=torch.device("cpu")))
+lstm_model.eval()
+
+# Other Utilities
 MAX_LEN = 30
 
+def encode(text):
+    tokens = word_tokenize(text.lower())
+    ids = [vocab.get(t, 0) for t in tokens][:MAX_LEN]
+    return ids + [0] * (MAX_LEN - len(ids))
+
+@lru_cache(maxsize=128)
+def dt_predict_recommendation(model_name):
+    try:
+        mysqlconn.reconnect()
+        model_reviews_df = pd.read_sql(f"SELECT Reviews FROM gadget_reviews WHERE Model = '{model_name}'", mysqlconn)
+        if model_reviews_df.empty:
+            return f"No reviews found for model: {model_name}"
+
+        model_reviews = model_reviews_df["Reviews"].tolist()
+        model_reviews_vectorized = countvector.transform(model_reviews)
+        predicted_ratings = dtc.predict(model_reviews_vectorized)
+        average_rating = predicted_ratings.mean()
+
+        if average_rating >= .5:
+            return f"The model '{model_name}' is likely to be recommended (average predicted rating: {average_rating:.2f})."
+        else:
+            return f"The model '{model_name}' is not likely to be recommended (average predicted rating: {average_rating:.2f})."
+
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+# @lru_cache(maxsize=128)
+def lstm_predict_recommendation(gadgetmodel):
+    query = f"SELECT Reviews, Rating, Model FROM gadget_reviews WHERE Model = '{gadgetmodel}'"
+    mysqlconn.reconnect()
+    df = pd.read_sql(query, mysqlconn)
+    if df.empty:
+        return f"No data found for model: {gadgetmodel}"
+
+    predictions = []
+    with torch.no_grad():
+        for _, row in df.iterrows():
+            input_tensor = torch.tensor([encode(row['Model'] + " " + row['Reviews'])], dtype=torch.long)
+            output = lstm_model(input_tensor)
+            predictions.append(output.item())
+
+    avg_pred = np.mean(predictions)
+    return f"Prediction for '{gadgetmodel}': {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}"
+
 def sub_datacleaning_reco(temp_df):
-    # custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
-
-    #Remove Column Username since this column is unnecessary
-    temp_df["Reviews"] = temp_df["Reviews"].str.lower()
-
-    # All records with not value for REVIEWS will be dropped
-    if temp_df["Reviews"].isnull().values.any() == True:
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-
+    temp_df = temp_df.dropna(subset=['Reviews'])
+    temp_df = temp_df[temp_df['Reviews'].str.strip() != '']
     # Replace all special characters into black spaces which will also be remove
     temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
     temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
     temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
     temp_df["Reviews"] = temp_df["Reviews"].replace(r"x000D", '', regex=True)
-    temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)        
+    temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)
     temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
     temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True) #Eto
     temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
-
-    def tokenize_reviews(review_text):
-        review_sentence = word_tokenize(review_text)
-        return review_sentence
-    temp_df['Reviews'] = temp_df['Reviews'].apply(tokenize_reviews)
-
-    def lemmatize_review(review_text):
-        lemmatizer = WordNetLemmatizer()
-        lemmatize_words = [lemmatizer.lemmatize(word) for word in review_text]
-        lemmatize_text = ' '.join(lemmatize_words)
-        return lemmatize_text
-
-    temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)    
-    temp_df["Reviews"].replace('', None, inplace=True)
-    
-    if temp_df["Reviews"].isnull().values.any():
-        temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-    
-    # temp_df["Rating"] = temp_df["Rating"].astype(str)
-    temp_df["Rating"] = temp_df["Rating"].astype(int)
-    temp_df = temp_df.drop(temp_df[temp_df["Rating"]==3].index, inplace=False)
     return temp_df
 
-def load_models(vocab_size, embed_size, hidden_size):
-    model = ProductLSTM(vocab_size,embed_size, hidden_size)     #vocab, 64 , 128
-    model.load_state_dict(torch.load('saved_weights_model2.pt'))
-    model.eval() # Set to evaluation mode
-    print ("Properly Loaded")
-    return model
-
-def tokenize(sentence):
-    return word_tokenize(sentence.lower())
-
-def encode_text(text):
-    tokens = tokenize(text)
-    ids = [word2idx.get(t, 0) for t in tokens][:MAX_LEN]
-    return ids + [0] * (MAX_LEN - len(ids))
-
-def encode_sentence(sentence):
-    tokens = tokenize(sentence)
-    ids = [word2idx.get(token, 0) for token in tokens][:MAX_LEN]
-    return ids + [0] * (MAX_LEN - len(ids))
-
-def predict_for_product(df, model, product_name):
-
-    # Collect all reviews for this product
-    product_reviews = [
-        (row.Reviews, row.Rating, row.Model, row.Recommend)
-        for row in df.itertuples(index=False)
-        if row.Model.lower() == product_name.lower()]
-    if not product_reviews:
-        return "Product not found."
-
-    model.eval()
-    predictions = []
-    with torch.no_grad():
-        for review, rating, product, _ in product_reviews:
-            x = torch.tensor([encode_text(product + " " + review)], dtype=torch.long)
-            r = torch.tensor([rating], dtype=torch.float)
-            out = model(x, r).item()
-            predictions.append(out)
-
-    avg_score = sum(predictions) / len(predictions)
-    return "Recommend" if avg_score >= 0.5 else "Not Recommend"
-
-class ProductLSTM(nn.Module):
-    def __init__(self, vocab_size, embed_dim, hidden_dim):
-        super().__init__()
-        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
-        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
-        self.fc1 = nn.Linear(hidden_dim + 1, 64)
-        self.fc2 = nn.Linear(64, 1)
-
-    def forward(self, x, rating):
-        embedded = self.embed(x)
-        _, (h_n, _) = self.lstm(embedded)
-        h_n = h_n.squeeze(0)
-        combined = torch.cat((h_n, rating.unsqueeze(1)), dim=1)
-        out = torch.relu(self.fc1(combined))
-        return torch.sigmoid(self.fc2(out))
-    
-mysqlconn.reconnect()
-sqlstring_reco = "SELECT * FROM gadget_reviews"
-temp_df = pd.read_sql(sqlstring_reco, mysqlconn)    
-df = sub_datacleaning_reco(temp_df)
-
-df['Recommend'] = ''
-df.loc[df['Rating'] >= 4, 'Recommend'] = "Recommend"
-df.loc[df['Rating'] <= 2, 'Recommend'] = "Not Recommend"
-label2id = {"Recommend": 1, "Not Recommend": 0}
-id2label = {1: "Recommend", 0: "Not Recommend"}
-df2= df[['Reviews', 'Rating','Model', 'Recommend']]
-
-vocab = set()
-for reviews in df['Reviews']:
-    vocab.update(tokenize(reviews))
-for model1 in df['Model']:
-    vocab.update(tokenize(model1))
-
-word2idx = {word: i+1 for i, word in enumerate(vocab)}  # reserve 0 for padding
-word2idx["<PAD>"] = 0
-
-model = load_models(len(word2idx), 64, 128)
-
 @app.route("/generaterecomendation", methods=["GET", "POST"])
-
-# -------------------------------------------------- 
-# For Index.html
-# --------------------------------------------------
-
-
 def modelrecommendation():
     brands = session["brands"]
     type = session["type"]
     gadgetmodel = session["model"]
-
     complete_gadget = brands + " " + type + " " + gadgetmodel
     item_desc = brands +  " " + gadgetmodel
     mysqlconn.reconnect()
@@ -172,11 +130,6 @@ def modelrecommendation():
     temp_df = pd.read_sql(sqlstring, mysqlconn)
     temp_df = sub_datacleaning(temp_df)
     
-    # Run Inference
-    product_input = gadgetmodel #gadget model ito
-    result = predict_for_product(df2, model, product_input)
-    str_result_reco ="Based on the Reviews and Rating from different users, this gadget is: " + result   
-
     attrib_table(temp_df)
     top_reco, k_count = sub_KMeans(type)
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(gadgetmodel)
@@ -184,10 +137,9 @@ def modelrecommendation():
     airesult = sub_AIresult(item_desc)
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brands)
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
+    str_result_dt = dt_predict_recommendation(gadgetmodel)
+    str_result_reco = lstm_predict_recommendation(gadgetmodel)
 
-    # train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
-    # evaluate_lstm_test_train_result(train_accs, test_accs, train_loss, test_loss)
-    train_loss, train_accs, test_loss, test_accs = 0,0,0,0
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
                         dev_images1 = dev_images1,
@@ -199,18 +151,14 @@ def modelrecommendation():
                         str_featreco = featured_reco,
                         str_details = detailed_reco,
                         str_result_reco = str_result_reco,
+                        str_result_dt = str_result_dt,
                         complete_gadget = complete_gadget,
                         top_reco = top_reco,
                         k_count = k_count,
-                        epoch_train_losses = train_loss,
-                        epoch_train_accs = train_accs,
-                        epoch_test_losses = test_loss,
-                        epoch_test_accs = test_accs,
                         summary_graph = "./static/HTML/images/Summary_Graph.png"
                         )
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
-
 def uploadCSV():
     filepath = request.files["csvfile"]
     csv_string = filepath.stream.read().decode("utf-8")
@@ -246,30 +194,31 @@ def addImageURL():
     brand =  session["ndsbrands"]
     type = session["ndstype"]
     model = session["ndsmodel"]
-    mysqlconn.reconnect()
-    cursor = mysqlconn.cursor()
-    sqlstring = "INSERT INTO image_paths (Model, Brand, Type, Path,Path2,Path3,Path4) VALUES (%s,%s,%s,%s,%s,%s,%s)"    
-    print (sqlstring)
-    strvalue = (model, brand, type, imagepath,imagepath2,imagepath3,imagepath4,)
-    cursor.execute(sqlstring, strvalue)
-    notif = "Image Uploaded and save to database"
-    mysqlconn.commit()
-    mysqlconn.close()
-    return render_template("newdataset.html", notif=notif)
+
+    with sqlengine.begin() as conn:
+        sqlstring = text("INSERT INTO image_paths (Model, Brand, Type, Path, Path2, Path3, Path4) VALUES (:model, :brand, :type, :path1, :path2, :path3, :path4)")
+        conn.execute(sqlstring, {
+            'model': model,
+            'brand': brand,
+            'type': type,
+            'path1': imagepath,
+            'path2': imagepath2,
+            'path3': imagepath3,
+            'path4': imagepath4
+        })
+
+    return render_template("newdataset.html", notif="List of images has been save")
 
 @app.route("/newdataset")
 def index():
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , sqlengine)
     brands = temp_df["Brand"].drop_duplicates()
-    mysqlconn.close()
     return render_template("newdataset.html",brands = brands.to_numpy())
 
 @app.route("/ndsbrandtype", methods=["GET", "POST"])
 def ndsbrandtype():
     session["ndsbrands"]= str(request.form["ndsgadgetBrand"])
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"'", sqlengine)
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("newdataset.html", 
                            gadgetType = gadgetType.to_numpy(), 
@@ -278,8 +227,7 @@ def ndsbrandtype():
 @app.route("/ndstypemodel", methods=["GET", "POST"])
 def ndstypemodel():
     session["ndstype"]= str(request.form["gadgetType"])
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", sqlengine)
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("newdataset.html", 
                            gadgetModel = gadgetModel.to_numpy(), 
@@ -289,7 +237,6 @@ def ndstypemodel():
 @app.route("/ndsmodelcomplete", methods=["GET", "POST"])
 def ndsmodelcomplete():
     session["ndsmodel"] = str(request.form["gadgetModel"])
-    mysqlconn.reconnect()
     return render_template("newdataset.html", 
                            selectedtype = session["ndstype"], 
                            selectbrand= session["ndsbrands"], 
@@ -297,10 +244,8 @@ def ndsmodelcomplete():
 
 @app.route("/")
 def home():
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews order by Brand" , mysqlconn)
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews order by Brand" , sqlengine)
     brands = temp_df["Brand"].drop_duplicates()
-    mysqlconn.close()
     return render_template("index.html", 
                            brands = brands.to_numpy(),
                            dev_images = "/static/HTML/images/NIA.jpg",
@@ -308,21 +253,17 @@ def home():
                            )
 
 @app.route("/brandtype", methods=["GET", "POST"])
-
 def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
     mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"' order by Type", mysqlconn)
-    mysqlconn.close()
     gadgetType = temp_df["Type"].drop_duplicates()
     return render_template("index.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["brands"])
  
 @app.route("/typemodel", methods=["GET", "POST"])
 def typemodel():
     session["type"]= str(request.form["gadgetType"])
-    mysqlconn.reconnect()
-    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"' order by Model", mysqlconn)
-    mysqlconn.close()
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["brands"] +"' and Type='"+session["type"]+"' order by Model", sqlengine)
     gadgetModel = temp_df["Model"].drop_duplicates()
     return render_template("index.html", gadgetModel = gadgetModel.to_numpy(), selectedtype = session["type"], selectbrand= session["brands"])
 
@@ -331,30 +272,21 @@ def modelcomplete():
     session["model"] = str(request.form["gadgetModel"])
     return render_template("index.html", selectedtype = session["type"], selectbrand= session["brands"], selectedmodel = session["model"])
 
-def reset_weights(model):
-    for layer in model.children():
-        if hasattr(layer, 'reset_parameters'):
-            layer.reset_parameters()
-
-def sub_recommendation_summary(model):
-#    model = "iPhone 13"
+def sub_recommendation_summary(gadgetmodel):
     mysqlconn.close()
     mysqlconn._open_connection()
-    # model = "Galaxy S24+"
-    #temp_df_count = pd.read_sql("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'", mysqlconn)
-    #temp_df_reco = pd.read_sql("SELECT * FROM attribute_table where Model='"+model+"'", mysqlconn)
     with sqlengine.begin() as connection:
-        temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+model+"'"), connection)
+        temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+gadgetmodel+"'"), connection)
 
     with sqlengine.begin() as connection:
-        temp_df_reco = pd.read_sql(sqlalch.text("SELECT * FROM attribute_table where Model='"+model+"'"), connection)
-    
+        temp_df_reco = pd.read_sql(sqlalch.text("SELECT * FROM attribute_table where Model='"+gadgetmodel+"'"), connection)
+     
     batt = temp_df_reco["Batt_PR"][0]
     scr = temp_df_reco["Scr_PR"][0]
     spd = temp_df_reco["Spd_PR"][0]
     mem = temp_df_reco["Mem_PR"][0]
     aud = temp_df_reco["Aud_PR"][0]
-    featured_reco = ""
+    featured_reco = ""  
     sub_featured = ""
     if batt > scr and batt > spd and batt > mem and batt > aud:
         featured_reco += "Battery is one of the best feature."
@@ -375,24 +307,21 @@ def sub_recommendation_summary(model):
         featured_reco += "Neither of the features is good or bad"
         sub_featured += "Over all, the gadget is neither good nor bad. It is just an average gadget."
         
-    #summary_reco = "Based on the " + str(temp_df_count["count"][0]) + " reviews: \n Battery has " + str(temp_df_reco["Batt_PR"][0]) + " positive reviews \n Screen has " + str(temp_df_reco["Scr_PR"][0]) + " positive reviews \n Speed has " + str(temp_df_reco["Spd_PR"][0]) + " positive reviews \n Memory Size has " + str(temp_df_reco["Mem_PR"][0]) + " positive reviews \n Audio Quality " + str(temp_df_reco["Aud_PR"][0]) + " positive reviews "
     summary_reco = [ temp_df_reco["Batt_PR"][0], temp_df_reco["Scr_PR"][0], temp_df_reco["Spd_PR"][0], temp_df_reco["Mem_PR"][0], temp_df_reco["Aud_PR"][0] ] 
-    #summary_reco = summary_reco.split("\n")
+
     return summary_reco, featured_reco, sub_featured 
     
 def sub_AIresult(item_desc):
-        #item_desc = "Apple iphone 15"
-        genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        airesult = str(model.generate_content("specifications of " + item_desc).text)
-        airesult = airesult.replace("\n","")
-        airesult = airesult.replace("**","<br>")
-        airesult = airesult.replace("*","")
-        return airesult
+    #item_desc = "Apple iphone 15"
+    genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    airesult = str(model.generate_content("specifications of " + item_desc).text)
+    airesult = airesult.replace("\n","")
+    airesult = airesult.replace("**","<br>")
+    airesult = airesult.replace("*","")
+    return airesult
 
 def sub_AIresult_Shop_Loc(item_desc):
-    import google.generativeai as genai
-    #item_desc = "Apple iphone 15"
     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
     model = genai.GenerativeModel("gemini-1.5-flash")
     shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
@@ -402,104 +331,87 @@ def sub_AIresult_Shop_Loc(item_desc):
     return shoploc_list
     
 def sub_OpenAI(model, type, brand):
-    # brand = "Apple" 
-    # type = "Smartphone"
-    # model = "iPhone 15"
-    cursor = mysqlconn.cursor()
-    cursor.execute("SELECT Path, Path2, Path3, Path4 FROM image_paths where model='" + model + "' and type='"+type+ "' and brand='"+brand+"'")
-    img_result = cursor.fetchone()
-    if img_result is not None:
-        fetch_img_result1 = img_result[0]
-        fetch_img_result2 = img_result[1]
-        fetch_img_result3 = img_result[2]
-        fetch_img_result4 = img_result[3]
+    default_img = "./static/HTML/images/NIA.jpg"
+    query = text("""
+        SELECT Path, Path2, Path3, Path4
+        FROM image_paths
+        WHERE model = :model AND type = :type AND brand = :brand
+    """)
+
+    with sqlengine.begin() as connection:
+        result = connection.execute(query, {
+            "model": model,
+            "type": type,
+            "brand": brand
+        }).fetchone()
+
+    if result:
+        return result[0], result[1], result[2], result[3]
     else:
-        fetch_img_result1 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result2 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result3 = "./static/HTML/images/NIA.jpg"
-        fetch_img_result4 = "./static/HTML/images/NIA.jpg"
-    cursor.close()
-    return fetch_img_result1, fetch_img_result2, fetch_img_result3, fetch_img_result4
+        return default_img, default_img, default_img, default_img
         
 def sub_datacleaning(temp_df):
-        # custom_stopwords = ['also', 'dad', 'mom', 'kids', 'christmas', 'hoping']
+    # sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+gadgetmodel + "'"
+    # temp_df = pd.read_sql(sqlstring, sqlengine)
+    lemmatizer = WordNetLemmatizer()
 
-        #Remove Column Username since this column is unnecessary
-        temp_df["Reviews"] = temp_df["Reviews"].str.lower()
+    #Remove Column Username since this column is unnecessary
+    temp_df["Reviews"] = temp_df["Reviews"].str.lower()
         
-        # Checking for missing values. Fill necessary and drop if reviews are null
-        if temp_df["Username"].isnull().values.any() == True:
-            temp_df["Username"] = temp_df["Username"].fillna("No Username")       
+    # Fill missing usernames
+    temp_df["Username"] = temp_df["Username"].fillna("No Username")       
+    
+    # Date with invalid values will be default to 1/1/11, which also not useful :)
+    temp_df["Date"] = temp_df["Date"].fillna("1/1/11")
+
+    # All records with not value for REVIEWS will be dropped
+    temp_df.dropna(subset=["Reviews"], inplace=True)
+    temp_df = temp_df[temp_df["Reviews"].str.strip() != ""]
+
+    # Replace all special characters into black spaces which will also be remove
+    temp_df["Reviews"] = (
+            temp_df["Reviews"]
+            .str.replace(r'\n|\r', ' ', regex=True)
+            .str.replace(r'http\S+', '', regex=True)
+            .str.replace(r'x000D', '', regex=True)
+            .str.replace(r'<[^>]+>', '', regex=True)
+            .str.replace(r'[^a-zA-Z0-9]', ' ', regex=True)
+            .str.replace(r'\s+[a-zA-Z]\s+', ' ', regex=True)
+            .str.replace(r'\s+', ' ', regex=True)
+            .str.strip()
+    )
+
+    # Tokenize and lemmatize reviews
+    # temp_df["Reviews"] = temp_df["Reviews"].apply(lambda text: ' '.join(lemmatizer.lemmatize(token) for token in word_tokenize(text)))
+    temp_df['Reviews'] = temp_df['Reviews'].apply(lambda x: word_tokenize(x))
+    
+    def lemmatize_review(review_text):
+        lemmatize_words = [lemmatizer.lemmatize(word) for word in review_text]
+        lemmatize_text = ' '.join(lemmatize_words)
+        return lemmatize_text
+    temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)
         
-        # Date with invalid values will be default to 1/1/11, which also not useful :)
-        # Date with no values will also be converted, which also not useful :)
-        if temp_df["Date"].isnull().values.any() == True:
-            temp_df["Date"] = temp_df["Date"].fillna("1/1/11")
 
-        # All records with not value for REVIEWS will be dropped
-        if temp_df["Reviews"].isnull().values.any() == True:
-            temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
-
-        # Replace all special characters into black spaces which will also be remove
-        temp_df["Reviews"] = temp_df["Reviews"].str.replace("\n",' ')
-        temp_df["Reviews"] = temp_df["Reviews"].str.replace("\r",' ')
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r'http\S+', '', regex=True)
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r"x000D", '', regex=True)
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r'<[^>]+>', '', regex= True)        
-        temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True) #Eto
-        temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
-
-        # temp_df_temp = temp_df
-        # # Eto nalang
-        # temp_df = temp_df_temp
-
-        def tokenize_reviews(review_text):
-            review_sentence = word_tokenize(review_text)
-            return review_sentence
-        temp_df['Reviews'] = temp_df['Reviews'].apply(tokenize_reviews)
-
-
-        # nltk.download('stopwords')
-        # def remove_stopwords(review_text):                  
-        #     stop_words = set(stopwords.words('english'))
-        #     filtered_text = [word for word in review_text if word not in stop_words]
-        #     return filtered_text
-        # temp_df['Reviews'] = temp_df['Reviews'].apply(remove_stopwords)
-
-
-        def lemmatize_review(review_text):
-            lemmatizer = WordNetLemmatizer()
-            lemmatize_words = [lemmatizer.lemmatize(word) for word in review_text]
-            lemmatize_text = ' '.join(lemmatize_words)
-            return lemmatize_text
-        temp_df['Reviews'] = temp_df['Reviews'].apply(lemmatize_review)
+    # Drop any rows that became empty after processing
+    temp_df.replace({"Reviews": {"": None}}, inplace=True)
+    temp_df.dropna(subset=["Reviews"], inplace=True)
         
-        temp_df["Reviews"].replace('', None, inplace=True)
-        
-        if temp_df["Reviews"].isnull().values.any():
-            temp_df = temp_df.dropna(subset=['Reviews'], axis=0,how='any',inplace=False)
+    # Convert Ratings to binary: 1 & 2 → 0 (Negative), 4 & 5 → 1 (Positive), drop 3 (Neutral)
+    temp_df["Rating"] = temp_df["Rating"].astype(str)
+    temp_df["Rating"] = temp_df["Rating"].str.replace(r'^[1-2]$', '0', regex=True)
+    temp_df["Rating"] = temp_df["Rating"].str.replace(r'^[4-5]$', '1', regex=True)
 
-        #Rating of the sentiments will be converted into 3 classes
-        # 0 - Negative Rating or review, These are with rating of 1 & 2
-        # 1 - Positive Rating or review, These are with rating of 4 & 5
-        
-        temp_df["Rating"] = temp_df["Rating"].astype(str)
-        temp_df["Rating"] = temp_df["Rating"].str.replace('[1-2]', '0', regex=True)
-        temp_df["Rating"] = temp_df["Rating"].str.replace('[4-5]', '1', regex=True)
-        temp_df["Rating"] = temp_df["Rating"].astype(int)
-        # 3 - Neutral Rating or review, These are with rating of 3
-        # This rating will be drop to be dataframe since these are all neither positive or negative
-        temp_df = temp_df.drop(temp_df[temp_df["Rating"]==3].index, inplace=False)
-        return temp_df
+    # Convert to int and drop neutral ratings
+    temp_df["Rating"] = pd.to_numeric(temp_df["Rating"], errors='coerce')
+    temp_df = temp_df[temp_df["Rating"].isin([0, 1])]
+
+    return temp_df
 
 def attrib_table(temp_df_attrib):
-    
     #--------------------------------------------------------------------------------------------
     #Extracting phrases for creating corpora that will be use in decision tree recommendation
     # FF: temp_df_attrib here is a cleaned dataset came from datacleaning function
     #--------------------------------------------------------------------------------------------
-    #temp_df_attrib = temp_df
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
     df = pd.DataFrame()
     def extract_attrib(attrib_value):
@@ -564,7 +476,6 @@ def attrib_graph(data_count):
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
-    #data = [100, 27, 20, 1,1]
     gadgetnames = ['Battery', 'Screen', 'Speed', 'RAM', 'Audio']
     bar_labels = ['Battery', 'Screen', 'Speed', 'RAM','Audio']
     bar_colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange', 'tab:purple']
@@ -604,57 +515,13 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
     plt.grid()
     plt.show()
 
-def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
-    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    lstm_model.to(device)
-    lstm_model.eval()
-    all_preds = []
-    all_labels = []
-
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs, _ = lstm_model(inputs)
-            predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
-            all_preds.extend(predicted.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-
-    # Precision, Recall, F1 Score
-    precision = precision_score(all_labels, all_preds)
-    recall = recall_score(all_labels, all_preds)
-    f1 = f1_score(all_labels, all_preds)
-    
-    # Compute confusion matrix
-    cm = confusion_matrix(all_labels, all_preds)
-
-    #Convert Values into percent
-    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")   
-    ax.set_title("Confusion Matrix for LSTM Model")
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
-    
-    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
-    # disp.plot(cmap=plt.cm.Blues)
-    # plt.title("Confusion Matrix")
-    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
-    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
-    plt.show()
-
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall:    {recall:.4f}")
-    print(f"F1 Score:  {f1:.4f}")
-
 def sub_KMeans(gadgettype):
-    mysqlconn.reconnect()
-    kmeans_df = pd.read_sql("SELECT * FROM gadget_reviews where Type='" + gadgettype + "'", mysqlconn)
+    kmeans_df = pd.read_sql("SELECT Rev_No, Model, Rating FROM gadget_reviews where Type='" + gadgettype + "'", sqlengine)
     kmeans_df = kmeans_df.iloc[:10000,:]
     df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
 
     pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
-    num_clusters = 3  # Choose the number of clusters)
+    num_clusters = 3
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(pivot_table)
     user_id = 12
@@ -672,13 +539,10 @@ def sub_decision_tree(gadgettype):
     from sklearn.model_selection import train_test_split
     from sklearn.feature_extraction.text import CountVectorizer
     import matplotlib.pyplot as plt
-
     import seaborn as sns
     from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 
-    mysqlconn.reconnect()
-    # dectree_df = pd.read_sql("SELECT * FROM gadget_reviews WHERE Type = '" + gadgettype + "'", mysqlconn)
-    dectree_df = pd.read_sql("SELECT * FROM gadget_reviews", mysqlconn)
+    dectree_df = pd.read_sql("SELECT Brand, Type, Model, Reviews, Rating FROM gadget_reviews", sqlengine)
     dectree_df = sub_datacleaning(dectree_df)
     X  = dectree_df["Reviews"]
 
@@ -689,13 +553,11 @@ def sub_decision_tree(gadgettype):
     X_train, X_test, y_train, y_test = train_test_split(X,y, random_state=42, test_size=.2)
     dtc = DecisionTreeClassifier()
     dtc.fit(X_train, y_train)
-
     y_pred = dtc.predict(X_test)
     cm = confusion_matrix(y_test, y_pred)
 
     #Convert Values into percent
     cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
     ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")    
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
@@ -703,21 +565,14 @@ def sub_decision_tree(gadgettype):
     plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
     plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
     plt.show()
-    
-    # disp = ConfusionMatrixDisplay(confusion_matrix=cm_percent, display_labels=["Not Recommend", "Recommend"])
-    # disp.plot(cmap='Blues')
-    # plt.title("Confusion Matrix Decision Tree")
-    # plt.show()
 
     # Precision, Recall, F1 Score
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
-
     print(f"Precision: {precision:.3%}")
     print(f"Recall: {recall:.3%}")
     print(f"F1 Score: {f1:.3%}")
 
-app.secret_key = "abcdef12345"
 if __name__ == "__main__":
     app.run(debug=True)

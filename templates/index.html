@@ -18,6 +18,7 @@
       if (jsbrand.length > 1){
         if (jstype.length > 1){
           if (jsmodel.length > 1){
+            alert("Please wait... \n Processing  of data may take a while.")
             form.action = "generaterecomendation";
             form.submit();
           }
@@ -226,7 +227,8 @@
               <div class="card-header card-bgcolor-head"><i class="fa-solid fa-cart-shopping"></i> Recommendation Result from Prediction</div>
               <div class="card-body overflow-auto" style="height: 250px;">
                   <p class="card-text ">Based on Model Simulated using LSTM
-                    {{str_result_reco | safe }}
+                    {{str_result_reco | safe }} <br><br>
+                    {{str_result_dt | safe }}
                   </p>
               </div>
           </div>
