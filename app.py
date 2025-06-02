@@ -68,12 +68,13 @@ def encode(text):
 @lru_cache(maxsize=128)
 def dt_predict_recommendation(model_name):
     try:
+        model_name ="iphone 13"    
         mysqlconn.reconnect()
         model_reviews_df = pd.read_sql(f"SELECT Reviews FROM gadget_reviews WHERE Model = '{model_name}'", mysqlconn)
         if model_reviews_df.empty:
             return f"No reviews found for model: {model_name}"
-
-        model_reviews = model_reviews_df["Reviews"].tolist()
+        model_reviews = model_reviews_df["Reviews"] .tolist()
+        model_reviews = [review.lower() if isinstance(review, str) else "" for review in model_reviews]
         model_reviews_vectorized = countvector.transform(model_reviews)
         predicted_ratings = dtc.predict(model_reviews_vectorized)
         average_rating = predicted_ratings.mean()
@@ -88,9 +89,12 @@ def dt_predict_recommendation(model_name):
 
 # @lru_cache(maxsize=128)
 def lstm_predict_recommendation(gadgetmodel):
+
     query = f"SELECT Reviews, Rating, Model FROM gadget_reviews WHERE Model = '{gadgetmodel}'"
     mysqlconn.reconnect()
     df = pd.read_sql(query, mysqlconn)
+    df = sub_datacleaning_reco(df)
+                               
     if df.empty:
         return f"No data found for model: {gadgetmodel}"
 
@@ -116,6 +120,8 @@ def sub_datacleaning_reco(temp_df):
     temp_df["Reviews"] = temp_df["Reviews"].replace('[^a-zA-Z0-9]', ' ', regex=True)
     temp_df["Reviews"] = temp_df["Reviews"].replace(r"\s+[a-zA-Z]\s+", ' ', regex=True) #Eto
     temp_df["Reviews"] = temp_df["Reviews"].replace(r" +", ' ', regex=True)
+    temp_df = temp_df[temp_df["Rating"] != 3]
+
     return temp_df
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
@@ -257,7 +263,7 @@ def brandtype():
     session["brands"]= str(request.form["gadgetBrand"])
     mysqlconn.reconnect()
     temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["brands"] +"' order by Type", mysqlconn)
-    gadgetType = temp_df["Type"].drop_duplicates()
+    gadgetType = temp_df["Type"].drop_duplicates().str.strip()
     return render_template("index.html", gadgetType = gadgetType.to_numpy(), selectbrand= session["brands"])
  
 @app.route("/typemodel", methods=["GET", "POST"])
@@ -516,23 +522,27 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
     plt.show()
 
 def sub_KMeans(gadgettype):
-    kmeans_df = pd.read_sql("SELECT Rev_No, Model, Rating FROM gadget_reviews where Type='" + gadgettype + "'", sqlengine)
-    kmeans_df = kmeans_df.iloc[:10000,:]
-    df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
+    try:
+        kmeans_df = pd.read_sql("SELECT Rev_No, Model, Rating FROM gadget_reviews where Type='" + gadgettype + "'", sqlengine)
+        kmeans_df = kmeans_df.iloc[:10000,:]
+        df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
+        pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
+        num_clusters = 3
+        kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+        cluster_labels = kmeans.fit_predict(pivot_table)
+        user_id = 12
+        user_cluster_label = cluster_labels[user_id - 1]
 
-    pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
-    num_clusters = 3
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-    cluster_labels = kmeans.fit_predict(pivot_table)
-    user_id = 12
-    user_cluster_label = cluster_labels[user_id - 1]
-    users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
-    average_ratings = pivot_table.loc[users_in_same_cluster].mean()
-    sorted_ratings = average_ratings.sort_values(ascending=False)
-    k = 4
-    top_kmeans_reco = sorted_ratings.head(k)
-
-    return top_kmeans_reco.items(), k
+        users_in_same_cluster = pivot_table.index[cluster_labels == user_cluster_label]
+        average_ratings = pivot_table.loc[users_in_same_cluster].mean()
+        sorted_ratings = average_ratings.sort_values(ascending=False)
+        k = 4
+        top_kmeans_reco = sorted_ratings.head(k)
+        return top_kmeans_reco.items(), k
+    except:
+        k=0
+        top_kmeans_reco = ("No other gadget to recommend","1")
+        return top_kmeans_reco, k
 
 def sub_decision_tree(gadgettype):
     from sklearn.tree import DecisionTreeClassifier

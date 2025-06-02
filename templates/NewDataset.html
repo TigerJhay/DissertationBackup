@@ -17,15 +17,50 @@
                 const urlImg2 = myform.txturldisplay2.value;
                 const urlImg3 = myform.txturldisplay3.value;
                 const urlImg4 = myform.txturldisplay4.value;
-                
+                const modelselect = "{{selectedmodel}}"
+                if(!urlImg1 && !urlImg2&& !urlImg3 && !urlImg4){
+                  alert ("No images attached. No need to upload image")
+                  return false 
+                }
+
+                if(!modelselect){
+                  alert("Selection is incomplete. \n Please provide model of gadget")
+                  return false
+                }
+
                 if (confirm("image URL should have values \n If no URL values where place, it will saved the blank field.") == true){
+
                   form.action = "imgURLUpload";
                   form.submit();
-                  alert("Go to action")
+                  alert("URL of imgages saved.")
                 }
-                else{
-                  alert("Process has been Cancelled");
+              }
+
+              function validateCsvFileattachment(event) {
+                const fileInput = document.getElementById('csvfile');
+                const file = fileInput.files[0]; // Get the first selected file
+                const form = document.getElementById('input_csvupload')
+
+                if (!file) {
+                  alert("No csv file attached")
+                  return false;
                 }
+                
+                const maxSizeMB = 10; // Example: 5 MB
+                const maxSizeBytes = maxSizeMB * 1024 * 1024; // Convert MB to Bytes
+
+                if (file.size > maxSizeBytes) {
+                    errorMessageDiv.textContent = `File size exceeds the limit of ${maxSizeMB} MB.`;
+                    event.preventDefault(); // Prevent form submission
+                    return false;
+                }
+
+                  // If all validations pass
+
+                form.action ="uploadCSV";
+                form.submit();
+                alert('File is valid! Processing submission...');
+                // return true; // Allow form submission if no issues (or if you handle it via AJAX and preventDefault)
               }
             </script>      
     </head>
@@ -66,10 +101,10 @@
             <div class="card-header card-bgcolor-head"> <i class="fa-solid fa-file-import"></i> Upload New Dataset</div>
               <div class="card-body"> 
                 <h6 class="card-title"> Choose File to upload ".csv" (UTF-8) file only. Please use proper formatting.</h6>
-                <form name="upload_file_csv" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
+                <form name="upload_file_csv" id="input_csvupload" action="/uploadCSV" method="POST"  enctype="multipart/form-data" >
                   <div class="input-group mb-3">
-                    <input type="file" class="form-control" name="csvfile">              
-                      <input type="button" class="input-group-text d-inline" value= "Upload" onclick="this.form.submit()">
+                    <input type="file"  class="form-control" id="csvfile" name="csvfile" accept=".csv*" title="Upload .csv utf-8 file" required>              
+                      <input type="button" class="input-group-text d-inline" value= "Upload" onclick="validateCsvFileattachment(event)()">
                   </div>
                 </form>
           </div>   
