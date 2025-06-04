@@ -106,8 +106,15 @@ def lstm_predict_recommendation(gadgetmodel):
             predictions.append(output.item())
 
     avg_pred = np.mean(predictions)
-    return f"Prediction for '{gadgetmodel}': {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}"
+    star_rating = round(avg_pred * 4) + 1  # ensures 0.0 → 1 star, 1.0 → 5 stars
 
+    # Generate visual stars
+    visual_stars = '★' * star_rating + '☆' * (5 - star_rating)
+
+    # return f"Prediction for '{gadgetmodel}' with average prediction of {avg_pred} : {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}"
+    return (f"Prediction for '{gadgetmodel}': {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}\n"
+        f"Average Score: {avg_pred:.2f}\n"
+        f"Estimated Star Rating: {star_rating} / 5  {visual_stars}")
 def sub_datacleaning_reco(temp_df):
     temp_df = temp_df.dropna(subset=['Reviews'])
     temp_df = temp_df[temp_df['Reviews'].str.strip() != '']
@@ -126,25 +133,63 @@ def sub_datacleaning_reco(temp_df):
 
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
-    brands = session["brands"]
-    type = session["type"]
-    gadgetmodel = session["model"]
-    complete_gadget = brands + " " + type + " " + gadgetmodel
-    item_desc = brands +  " " + gadgetmodel
+    flag = request.form['flag']
+
+    if flag == "HTTP":
+        brand = session["brands"]
+        type = session["type"]
+        gadgetmodel = session["model"]
+    elif flag == "Alternative":
+        gadgetmodel = str(request.form["otherModel"])
+        print (gadgetmodel)
+        sqlstring = f"SELECT Brand, Type, Model FROM gadget_reviews WHERE Model = '{gadgetmodel}'"
+        print (sqlstring)
+        with sqlengine.begin() as sqlconnection:
+            temp_result = pd.read_sql(sqlalch.text(sqlstring), sqlconnection)
+            print (temp_result)
+            brand = temp_result['Brand'].iloc[0]
+            type = temp_result['Type'].iloc[0]
+            gadgetmodel = temp_result['Model'].iloc[0] 
+        complete_gadget = brand + " " + type + " " + gadgetmodel
+        print (complete_gadget + " FOR ALTERNATIVE REQUEST")
+
+    complete_gadget = brand + " " + type + " " + gadgetmodel
+    print (complete_gadget)
+
+    item_desc = brand +  " " + gadgetmodel
     mysqlconn.reconnect()
-    sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brands+"' and Type='"+type+"' and Model='"+gadgetmodel + "'"
+    sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brand+"' and Type='"+type+"' and Model='"+gadgetmodel + "'"
     temp_df = pd.read_sql(sqlstring, mysqlconn)
+    
     temp_df = sub_datacleaning(temp_df)
+    print ("----->>> COMPLETED - DATA CLEANED")
     
     attrib_table(temp_df)
-    top_reco, k_count = sub_KMeans(type)
+    print ("----->>> COMPLETED - ATTRIB TABLE")
+    
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(gadgetmodel)
-    attrib_graph(summary_reco)
+    print ("----->>> COMPLETED - SUMMARY RECOMMENDATION")
+
     airesult = sub_AIresult(item_desc)
-    dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brands)
+    print ("----->>> COMPLETED - GENERATE AI GADGET SPECS SUMMARY")
+
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
+    print ("----->>> COMPLETED - GENERATE AI SHOPS LOCATIONS")
+
+    attrib_graph(summary_reco)
+    print ("----->>> COMPLETED - SUMMARY RECOMMENDATION GRAPH")
+
+    dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brand)
+    print ("----->>> COMPLETED - IMAGES LOADED")
+
+    top_reco, k_count = sub_KMeans(type)
+    print ("----->>> COMPLETED - TOP AND K")
+
     str_result_dt = dt_predict_recommendation(gadgetmodel)
+    print ("----->>> COMPLETED - DECISION TREE RECOMMENDATION")
+
     str_result_reco = lstm_predict_recommendation(gadgetmodel)
+    print ("----->>> COMPLETED - LSTM RECOMMENDATION/PREDICTION")
 
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
@@ -318,22 +363,23 @@ def sub_recommendation_summary(gadgetmodel):
     return summary_reco, featured_reco, sub_featured 
     
 def sub_AIresult(item_desc):
-    #item_desc = "Apple iphone 15"
+    # item_desc = "JBL T110BT"
     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    airesult = str(model.generate_content("specifications of " + item_desc).text)
-    airesult = airesult.replace("\n","")
-    airesult = airesult.replace("**","<br>")
-    airesult = airesult.replace("*","")
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+    airesult = str(model.generate_content("specifications of " + item_desc + " include reference with url. Show result in table body format source code only no comments from AI").text)
+    airesult = airesult.replace("```html\n","")
+    airesult = airesult.replace("\n```","")
+
+    # airesult = airesult.replace("*","")
     return airesult
 
 def sub_AIresult_Shop_Loc(item_desc):
+    # item_desc = "JBL T110BT"
     genai.configure(api_key="AIzaSyDgRaOiicnXJSx_GNtfvuNxKLhCDCDpHhQ")
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines").text)    
-    shoploc_list = shoploc_list.split("**")
-    shoploc_list = [strvalue.replace("\n","") for strvalue in shoploc_list]
-    shoploc_list = [strvalue.replace("*","<br>") for strvalue in shoploc_list]
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+    shoploc_list = str(model.generate_content( "list of stores to buy " + item_desc + " in the philippines. column arragement: Store, type, Price Range, URL reference. Show result in table body format source code only no comments from AI").text)
+    shoploc_list = shoploc_list.replace("```html","")
+    shoploc_list = shoploc_list.replace("\n```","")
     return shoploc_list
     
 def sub_OpenAI(model, type, brand):
@@ -493,6 +539,18 @@ def attrib_graph(data_count):
     plt.savefig(".\static\HTML\images\Summary_Graph.png")
     plt.close()
 
+@app.route("/otherselection", methods=["GET","POST"])
+def sub_other_recommendation():
+    gadgetmodel = str(request.form["otherModel"])
+    gadgetmodel = "iPhone 14"
+    sqlstring = f"SELECT Brand, Type, Model FROM gadget_reviews WHERE Model = '{gadgetmodel}'"
+    with sqlengine.begin() as sqlconnection:
+        temp_result = pd.read_sql(sqlalch.text(sqlstring), sqlconnection)
+        brandtype = str(temp_result['Brand'][0])
+        type = temp_result['Type'][0]
+        gadgetmodel = temp_result['Model'][0]      
+        # modelrecommendation()
+    return render_template("testvalue.html", value1 = session['Brand'], value2 = session['Type'], value3=session['Model']) 
 #--------------------------------------------------------------------
 # CONFUSION MATRIX, PRECISION, RECALL AND F1 SCORE
 #--------------------------------------------------------------------
@@ -523,10 +581,12 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
 
 def sub_KMeans(gadgettype):
     try:
+        gadgettype = "Smartphone"
         kmeans_df = pd.read_sql("SELECT Rev_No, Model, Rating FROM gadget_reviews where Type='" + gadgettype + "'", sqlengine)
         kmeans_df = kmeans_df.iloc[:10000,:]
         df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
         pivot_table = pd.pivot_table(df_reco, index='Rev_No', columns="Model", values='Rating', fill_value=0)
+        
         num_clusters = 3
         kmeans = KMeans(n_clusters=num_clusters, random_state=42)
         cluster_labels = kmeans.fit_predict(pivot_table)

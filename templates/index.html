@@ -37,6 +37,20 @@
       // alert("value of brand is: " + jsbrand + jstype + jsmodel)
 
     }
+
+    function validateotherselection(gadgetmodel){
+      const form = document.getElementById('otherRecommendation')
+      const jsmodel =  gadgetmodel
+      alert (jsmodel);
+          if (jsmodel.length > 1){
+            alert("Please wait... \n Processing  of data may take a while.")
+            form.action = "otherselection";
+            form.submit();
+          }
+          else{
+            alert ("Select Gadget Model");
+          }
+    }
   </script>
 
 </head>
@@ -94,6 +108,7 @@
       <div>Selected Model: {{complete_gadget}} </div>
 
       <form id="LoadListTypeTest" name="ValidateandGo" method="POST">
+        <input type="hidden" name="flag" value="HTTP">
         <input type="button" onclick="validateselection()" value="Submit" class="btn btn-light w-100 px-1 my-1">
       </form>
       <!-- 
@@ -156,7 +171,11 @@
               <div class="card-header card-bgcolor-head"><i class="fa-solid fa-circle-info"></i> Generated information assisted via A.I</div>
               <div class="card-body overflow-auto" style="height: 250px;">
                   <p class="card-text">
-                    {{ai_result | safe}}
+                    <div class="table-responsive">
+                      <table class="table table-striped table-bordered">
+                      {{ai_result | safe}}
+                      </table>
+                    </div>
                   </p>
               </div>
             </div>
@@ -193,30 +212,36 @@
           </div>
 
           <!-- Other Top 3 Recommendation  -->
-          <div class="col-3">
+          <div class="col-3"> 
             <div class="card card-bgcolor-body">
               <div class="card-header card-bgcolor-head"><i class="fa-solid fa-list"></i> Other {{k_count | safe}} Recommendations</div>
-              <div class="card-body overflow-auto" style="height: 300px;">               
-                    <ul class="list-group">
+              <div class="card-body overflow-auto" style="height: 300px;">
+                <form name="otherRecommendation" method="POST" id="otherRecommendation" action="generaterecomendation">    
+                  <ul class="list-group">
+                    <!-- <li class="list-group-item"><input type="submit" name="otherModel" value="iPhone 14" class="nav-link"></li> -->
                     {% for reco, reco_count in top_reco %}
-                      <!-- {{reco | safe}} - {{ reco_count | safe}} <br> -->
-                      <li class="list-group-item"> {{reco | safe}} </li>
+                    <!-- {{reco | safe}} - {{ reco_count | safe}} <br> -->
+                    <li class="list-group-item"><input type="submit" name="otherModel" value="{{reco}}" class="nav-link"></li>
                     {% endfor %}
+  
+                    <input type="hidden" name="flag" value="Alternative">
                     </ul>
+                  </form>  
               </div>
             </div>
           </div>
           <!--  -->
 
-        <div class="col-4">
+        <div class="col-8">
             <div class="card card-bgcolor-body">
                 <div class="card-header card-bgcolor-head"><i class="fa-solid fa-cart-shopping"></i> Shops to buy this device</div>
                 <div class="card-body overflow-auto" style="height: 250px;">
-                    <h6 class="card-title">Shops:</h6>
                     <p class="card-text ">
-                      {%for shop_loc in shop_loc_list %}
-                      {{shop_loc | safe}} <br>
-                      {% endfor %}
+                      <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                          {{shop_loc_list | safe}}
+                        </table>
+                    </div>
                     </p>
                 </div>
             </div>
