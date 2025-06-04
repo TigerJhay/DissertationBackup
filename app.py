@@ -68,7 +68,7 @@ def encode(text):
 @lru_cache(maxsize=128)
 def dt_predict_recommendation(model_name):
     try:
-        model_name ="iphone 13"    
+        # model_name ="iphone 13"    
         mysqlconn.reconnect()
         model_reviews_df = pd.read_sql(f"SELECT Reviews FROM gadget_reviews WHERE Model = '{model_name}'", mysqlconn)
         if model_reviews_df.empty:
@@ -79,10 +79,14 @@ def dt_predict_recommendation(model_name):
         predicted_ratings = dtc.predict(model_reviews_vectorized)
         average_rating = predicted_ratings.mean()
 
-        if average_rating >= .5:
-            return f"The model '{model_name}' is likely to be recommended (average predicted rating: {average_rating:.2f})."
+        if average_rating >=0:
+            return average_rating
         else:
-            return f"The model '{model_name}' is not likely to be recommended (average predicted rating: {average_rating:.2f})."
+            return 0
+        # if average_rating >= .5:
+        #     return f"The model '{model_name}' is likely to be recommended (average predicted rating: {average_rating:.2f})."
+        # else:
+        #     return f"The model '{model_name}' is not likely to be recommended (average predicted rating: {average_rating:.2f})."
 
     except Exception as e:
         return f"An error occurred: {e}"
@@ -106,15 +110,17 @@ def lstm_predict_recommendation(gadgetmodel):
             predictions.append(output.item())
 
     avg_pred = np.mean(predictions)
-    star_rating = round(avg_pred * 4) + 1  # ensures 0.0 → 1 star, 1.0 → 5 stars
+    return avg_pred
+    # scaled_rating = round(avg_pred * 5 * 2) / 2
+    # full_stars = int(scaled_rating)
+    # half_star = 1 if scaled_rating - full_stars == 0.5 else 0
+    # empty_stars = 5 - full_stars - half_star
+    # visual_stars = '★' * full_stars + '½' * half_star + '☆' * empty_stars
 
-    # Generate visual stars
-    visual_stars = '★' * star_rating + '☆' * (5 - star_rating)
+    # # return f"Prediction for '{gadgetmodel}' with average prediction of {avg_pred} : {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}"
+    # return (f"The gadget '{gadgetmodel}' is {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}\n"
+    # f"With Rating of: {scaled_rating} / 5  {visual_stars}")
 
-    # return f"Prediction for '{gadgetmodel}' with average prediction of {avg_pred} : {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}"
-    return (f"Prediction for '{gadgetmodel}': {'Recommend' if avg_pred >= 0.5 else 'Not Recommend'}\n"
-        f"Average Score: {avg_pred:.2f}\n"
-        f"Estimated Star Rating: {star_rating} / 5  {visual_stars}")
 def sub_datacleaning_reco(temp_df):
     temp_df = temp_df.dropna(subset=['Reviews'])
     temp_df = temp_df[temp_df['Reviews'].str.strip() != '']
@@ -185,11 +191,13 @@ def modelrecommendation():
     top_reco, k_count = sub_KMeans(type)
     print ("----->>> COMPLETED - TOP AND K")
 
-    str_result_dt = dt_predict_recommendation(gadgetmodel)
+    dt_rating = dt_predict_recommendation(gadgetmodel)
     print ("----->>> COMPLETED - DECISION TREE RECOMMENDATION")
 
-    str_result_reco = lstm_predict_recommendation(gadgetmodel)
+    lstm_rating = lstm_predict_recommendation(gadgetmodel)
     print ("----->>> COMPLETED - LSTM RECOMMENDATION/PREDICTION")
+
+    str_rating_result = sub_generate_rating(dt_rating, lstm_rating, gadgetmodel)
 
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
@@ -201,12 +209,13 @@ def modelrecommendation():
                         str_recommendation = summary_reco,
                         str_featreco = featured_reco,
                         str_details = detailed_reco,
-                        str_result_reco = str_result_reco,
-                        str_result_dt = str_result_dt,
                         complete_gadget = complete_gadget,
                         top_reco = top_reco,
                         k_count = k_count,
+                        str_rating_result = str_rating_result,
                         summary_graph = "./static/HTML/images/Summary_Graph.png"
+                        # str_result_reco = str_result_reco,
+                        # str_result_dt = str_result_dt,
                         )
 
 @app.route("/uploadCSV", methods=["GET", "POST"])
@@ -458,6 +467,17 @@ def sub_datacleaning(temp_df):
     temp_df = temp_df[temp_df["Rating"].isin([0, 1])]
 
     return temp_df
+
+def sub_generate_rating(dt_rating, lstm_rating, gadgetmodel):
+    overall_rating = (dt_rating + lstm_rating) / 2
+
+    scaled_rating = round(overall_rating * 5 * 2) / 2
+    full_stars = int(scaled_rating)
+    half_star = 1 if scaled_rating - full_stars == 0.5 else 0
+    empty_stars = 5 - full_stars - half_star
+    visual_stars = '★' * full_stars + '½' * half_star + '☆' * empty_stars
+    return (f"Estimated Star Rating: {scaled_rating} / 5  {visual_stars}"
+    f"\n This gadget '{gadgetmodel} is ' {'Recommend' if overall_rating >= 0.5 else 'Not Recommend'} based on the system evaluation.")
 
 def attrib_table(temp_df_attrib):
     #--------------------------------------------------------------------------------------------

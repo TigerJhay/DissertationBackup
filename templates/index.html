@@ -249,11 +249,10 @@
         <!-- For Recommendation Result -->
         <div class="col-4">
           <div class="card card-bgcolor-body">
-              <div class="card-header card-bgcolor-head"><i class="fa-solid fa-cart-shopping"></i> Recommendation Result from Prediction</div>
+              <div class="card-header card-bgcolor-head"><i class="fa-solid fa-cart-shopping"></i>System Recommendation</div>
               <div class="card-body overflow-auto" style="height: 250px;">
-                  <p class="card-text ">Based on Model Simulated using LSTM
-                    {{str_result_reco | safe }} <br><br>
-                    {{str_result_dt | safe }}
+                  <p class="card-text ">
+                    {{str_rating_result | safe }}
                   </p>
               </div>
           </div>
