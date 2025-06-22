@@ -51,6 +51,26 @@
             alert ("Select Gadget Model");
           }
     }
+
+    function validateUserInput(){
+      //validateselection();
+
+      const myform = document.forms["userFeedback"];
+      const form = document.getElementById('userfeedback');
+      const userFBcomment = myform.usrFBComment.value;
+      const userFBrating = myform.usrFBRating.value;
+      const datetime = myform.FBdatetime.value;
+      if(userFBcomment.length == 0 || userFBrating == "Select Rating" ){
+        alert ("Cannot proceed to save, \n Input Feedback is incomplete. No rating or comment/suggestion")
+        return false 
+      }
+
+      if (confirm("Confirm to save User Feeback Comment and Rating") == true){
+        form.action = "saveUserFeedback";
+        form.submit();
+        alert("User Feedback Comment and Rating has been saved.")
+      }
+    }
   </script>
 
 </head>
@@ -64,6 +84,7 @@
         <ul>
           <li><a href="#"><i class="fa-solid fa-minus"></i> Main</a></li>
           <li><a href="/newdataset"><i class="fa-solid fa-minus"></i> New Dataset</a></li>
+          <li><a href="/userinput"><i class="fa-solid fa-minus"></i> Input Review</a></li>
         </ul>    
           <div class="fs-6 text-center card-bgcolor-head m-1 p-1"><i class="fa-solid fa-magnifying-glass"></i> Select Gadget Here</div>
           <!-- Search on side -->
@@ -116,10 +137,53 @@
         <input type="submit" value="Submit" class="btn btn-light w-100 px-1">
       </form> -->
       <input type="reset" value="Reset" class="btn btn-light w-100 px-1" onclick="window.location.href='/'">
-          <!-- End search on side -->
+      
+      <!-- End search on side -->
   </div>
   <!-- End Side Bar -->
       <div class="container-fluid main_content px-2">
+        <form name="userFeedback" action="userFeedback" method="post" id="userfeedback">
+          <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">User Feedback</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                      <div class="input-group mb-3">
+                        <span class="input-group-text" id="basic-addon1">Date</span>
+                        <input type="text" class="form-control" id="datetime" name="FBdatetime" readonly>
+                      </div>
+                      <script>
+                        const now = new Date();
+                        const dateString = now.toLocaleDateString();              
+                        document.getElementById("datetime").value = dateString;
+                      </script>
+                      <label for="recipient-name" class="col-form-label">Is the generated output of this system provides helpful?</label>
+                      <select class="form-control custom-select custom-select-lg mb-3 w-50" name="usrFBRating">
+                        <option selected>Select Rating</option>
+                        <option value=5>5 - &#9733;&#9733;&#9733;&#9733;&#9733;</span></option>
+                        <option value=4>4 - &#9733;&#9733;&#9733;&#9733;</option>
+                        <option value=2>3 - &#9733;&#9733;&#9733;</option>
+                        <option value=2>2 - &#9733;&#9733;</option>
+                        <option value=1>1 - &#9733;</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="message-text" class="col-form-label">Any Comment and suggestions:</label>
+                      <textarea class="form-control" id="message-text" name="usrFBComment"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-secondary" onclick="validateUserInput()">Submit Feedback</button>
+                </div>
+              </div>
+            </div>
+          </div>
+       </form>
         <div class="row g-3">
           <div class="text-center header-title h5 p-2">
             E-Commerce Recommender System for Choosing Electronic Devices Using Generative A.I with Predictive, Prescriptive and Data Analytics
@@ -258,6 +322,11 @@
           </div>
       </div>
       </div>
+      <div class="col-12 footer-title" style="height: 50px;">
+        System Design and features for Dissertation study. <br> Develop By: Jherold Valdoz 
+        <a href="" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-whatever="@mdo">Enter User Feedback</a>
+      </div>
+
   </div>
 </body>
 </html>

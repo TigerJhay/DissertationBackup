@@ -1,4 +1,4 @@
-from flask import Flask, session, render_template, request
+from flask import Flask, session, render_template, request, redirect, url_for
 import google.generativeai as genai
 from io import StringIO
 import pandas as pd 
@@ -56,6 +56,7 @@ class LSTMClassifier(nn.Module):
 lstm_model = LSTMClassifier(vocab_size=len(vocab), embed_dim=32, hidden_dim=64)
 lstm_model.load_state_dict(torch.load("lstm_model2.pt", map_location=torch.device("cpu")))
 lstm_model.eval()
+
 
 # Other Utilities
 MAX_LEN = 30
@@ -271,9 +272,94 @@ def addImageURL():
 
 @app.route("/newdataset")
 def index():
+    temp_fb = pd.read_sql("SELECT FBdatetime, FBComment, FBRating FROM user_feedback", sqlengine)
+    fbrecord = temp_fb.to_dict(orient='records')
+
+    avg_fbrating = pd.read_sql("SELECT avg(FBRating) FROM user_feedback", sqlengine)
+    avg_fbrating = round (avg_fbrating.iloc[0,0], 2)
     temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , sqlengine)
     brands = temp_df["Brand"].drop_duplicates()
-    return render_template("newdataset.html",brands = brands.to_numpy())
+    return render_template("newdataset.html",brands = brands.to_numpy(), fbrecord = fbrecord, avg_fbrating = avg_fbrating)
+
+@app.route("/userfeedbacks")
+def loaduserfeedback():
+    fbrecords = pd.read_sql("SELECT FBdatetime, FBComment, FBRating FROM user_feedback", sqlengine)
+    return render_template("newdataset.html", fbrecord = fbrecords.to_numpy())
+
+@app.route("/userinput")
+def userinput():
+    temp_df = pd.read_sql("SELECT Distinct(Brand) FROM gadget_reviews" , sqlengine)
+    brands = temp_df["Brand"].drop_duplicates()
+    return render_template("UserInput.html", brands = brands.to_numpy())
+
+@app.route("/ucbrandtype", methods=["GET", "POST"])
+def ucbrandtype():
+    session["ucbrands"]= str(request.form["ucgadgetBrand"])
+    temp_df = pd.read_sql("SELECT Distinct(Type) FROM gadget_reviews where Brand='" +session["ucbrands"] +"'", sqlengine)
+    gadgetType = temp_df["Type"].drop_duplicates()
+    return render_template("UserInput.html", 
+                           gadgetType = gadgetType.to_numpy(), 
+                           selectbrand= session["ucbrands"])
+ 
+@app.route("/uctypemodel", methods=["GET", "POST"])
+def uctypemodel():
+    session["uctype"]= str(request.form["gadgetType"])
+    temp_df = pd.read_sql("SELECT Distinct(Model) FROM gadget_reviews where Brand='" +session["ndsbrands"] +"' and Type='"+session["ndstype"]+"'", sqlengine)
+    gadgetModel = temp_df["Model"].drop_duplicates()
+    return render_template("UserInput.html", 
+                           gadgetModel = gadgetModel.to_numpy(), 
+                           selectedtype = session["uctype"], 
+                           selectbrand= session["ucbrands"])
+
+@app.route("/ucmodelcomplete", methods=["GET", "POST"])
+def ucmodelcomplete():
+    session["ucmodel"] = str(request.form["gadgetModel"])
+    return render_template("UserInput.html", 
+                           selectedtype = session["uctype"], 
+                           selectbrand= session["ucbrands"], 
+                           selectedmodel = session["ucmodel"])
+
+@app.route("/saveUserComment", methods=["GET", "POST"])
+def ucInputSave():
+    ucReview = str(request.form["ucComment"])
+    ucRating = str(request.form["ucRating"])
+    brand =  session["ucbrands"]
+    type = session["uctype"]
+    model = session["ucmodel"]
+
+    with sqlengine.begin() as conn:
+        sqlstring = text("INSERT INTO gadget_reviews (Reviews, Rating, Model, Type, Brand) VALUES (:reviews, :rating, :model, :type, :brand)")
+        conn.execute(sqlstring, {
+            'reviews' : ucReview,
+            'rating' : ucRating,
+            'model': model,
+            'brand': brand,
+            'type': type
+        })
+
+    return render_template("UserInput.html", notif="Review and Rating Saved")
+
+@app.route("/saveUserFeedback", methods=["GET", "POST"])
+def userfeedback():
+    FBdatetime = str(request.form['FBdatetime'])
+    usrFBComment = str(request.form["usrFBComment"])
+    usrFBRating = str(request.form["usrFBRating"])
+    brand =  session["brands"]
+    type = session["type"]
+    model = session["model"]
+
+    with sqlengine.begin() as conn:
+        sqlstring = text("INSERT INTO user_feedback (FBComment, FBRating, FBdatetime, Model, Type, Brand) VALUES (:FBComment, :FBRating,:FBdatetime,  :model, :type, :brand)")
+        conn.execute(sqlstring, {
+            'FBComment' : usrFBComment,
+            'FBRating' : usrFBRating,
+            'FBdatetime' : FBdatetime,
+            'model': model,
+            'brand': brand,
+            'type': type
+        })
+    return redirect(url_for('home')) 
+
 
 @app.route("/ndsbrandtype", methods=["GET", "POST"])
 def ndsbrandtype():
@@ -598,6 +684,50 @@ def evaluate_lstm_test_train_result(epoch_train_accs, epoch_test_accs, epoch_tra
     plt.legend()
     plt.grid()
     plt.show()
+
+def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='cpu'):
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    lstm_model.to(device)
+    lstm_model.eval()
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs, _ = lstm_model(inputs)
+            predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    # Precision, Recall, F1 Score
+    precision = precision_score(all_labels, all_preds)
+    recall = recall_score(all_labels, all_preds)
+    f1 = f1_score(all_labels, all_preds)
+    
+    # Compute confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+
+    #Convert Values into percent
+    # cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    
+    ax = sns.heatmap(cm, annot=True, fmt=".2%", cmap="Blues")   
+    ax.set_title("Confusion Matrix for LSTM Model")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    
+    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    # disp.plot(cmap=plt.cm.Blues)
+    # plt.title("Confusion Matrix")
+    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.show()
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1:.4f}")
 
 def sub_KMeans(gadgettype):
     try:

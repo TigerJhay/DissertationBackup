@@ -151,7 +151,7 @@ def modelrecommendation():
     str_result_reco = lstm_predict_recommendation(gadgetmodel,temp_df2)
 
     # train_loss, train_accs, test_loss, test_accs = sub_LSTM(temp_df)
-    # evaluate_lstm_test_train_result(train_accs, test_accs, train_loss, test_loss)
+    #evaluate_lstm_test_train_result(train_accs, test_accs, train_loss, test_loss)
     train_loss, train_accs, test_loss, test_accs = 0,0,0,0
     return render_template("index.html",
                         shop_loc_list = shop_loc_list,
@@ -594,8 +594,9 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
     cm = confusion_matrix(all_labels, all_preds)
 
     #Convert Values into percent
-    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    ax = sns.heatmap(cm_percent, annot=True, fmt=".2%", cmap="Blues")   
+    # cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    
+    ax = sns.heatmap(cm, annot=True, fmt=".2%", cmap="Blues")   
     ax.set_title("Confusion Matrix for LSTM Model")
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")

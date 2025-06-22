@@ -27,6 +27,52 @@ mysqlconn = mysql.connector.connect(
 )
 sqlengine = create_engine('mysql+mysqlconnector://root@localhost/dbmain_dissertation', pool_recycle=1800)
 
+
+def evaluate_lstm_model_pytorch(lstm_model, test_loader, device='cpu'):
+    
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    lstm_model.to(device)
+    lstm_model.eval()
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs, _ = lstm_model(inputs)
+            predicted = (outputs > 0.5).long()  # Convert sigmoid output to binary
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    # Precision, Recall, F1 Score
+    precision = precision_score(all_labels, all_preds)
+    recall = recall_score(all_labels, all_preds)
+    f1 = f1_score(all_labels, all_preds)
+    
+    # Compute confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+
+    #Convert Values into percent
+    # cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    ax = sns.heatmap(cm, annot=True, fmt=".2%", cmap="Blues")   
+    ax.set_title("Confusion Matrix for LSTM Model")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    
+    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    # disp.plot(cmap=plt.cm.Blues)
+    # plt.title("Confusion Matrix")
+    plt.xticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.yticks(np.arange(2)+0.5,["Not Recommended", "Recommended"])
+    plt.show()
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1:.4f}")
+
+
 sqlstring_cm = "SELECT Reviews,Rating, Model FROM gadget_reviews"
 temp_df_cm = pd.read_sql(sqlstring_cm, mysqlconn)
 df = temp_df_cm.dropna(subset=['Reviews'])
@@ -41,6 +87,7 @@ df['Label'] = df['Rating'].apply(lambda r: 1 if r >= 4 else 0)
 # Text Preprocessing
 stop_words = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
+
 
 def preprocess(text):
     text = re.sub(r'http\S+', '', text)
@@ -117,7 +164,7 @@ criterion = nn.BCELoss()
 
 # Training loop
 print("Training model...\n")
-for epoch in range(5):
+for epoch in range(20):
     model.train()
     total_loss = 0
     for x_batch, y_batch in train_loader:
@@ -129,11 +176,12 @@ for epoch in range(5):
         optimizer.step()
         total_loss += loss.item()
     print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+    
+evaluate_lstm_model_pytorch(model, test_loader, device='cpu')
+# Save the trained model -----
+# torch.save(model.state_dict(), "lstm_model2.pt")
 
-# Save the trained model
-torch.save(model.state_dict(), "lstm_model2.pt")
-
-# Inference function
+# Inference function -----
 def predict_product(product_name):
     related_reviews = df[df['Model'].str.lower() == product_name.lower()]
     if related_reviews.empty:
@@ -150,7 +198,9 @@ def predict_product(product_name):
     avg_pred = np.mean(predictions)
     return "Recommend" if avg_pred >= 0.5 else "Not Recommend"
 
-# User input for prediction
-user_input = input("\nEnter Gadget name: ").strip()
-result = predict_product(user_input)
-print(f"\nPrediction for '{user_input}': {result}")
+# User input for prediction -----
+# user_input = input("\nEnter Gadget name: ").strip()
+# result = predict_product(user_input)
+# print(f"\nPrediction for '{user_input}': {result}")
+
+

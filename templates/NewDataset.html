@@ -73,19 +73,58 @@
         <ul>
           <li><a href="/"><i class="fa-solid fa-minus"></i> Main</a></li>
           <li><a href="/newdataset"><i class="fa-solid fa-minus"></i> New Dataset</a></li>
+          <li><a href="/userinput"><i class="fa-solid fa-minus"></i> Input Review</a></li>
         </ul>    
       <hr>
       <input type="reset" value="Reset" class="btn btn-light w-100 px-1" onclick="window.location.href='/newdataset'">
-
+      <br><br>
+      <form action="/userfeedbacks" name="LoadUserFeedback" method="POST">
+     
+      </form>
     </div>
     <!-- End Side Bar -->
 
 
     <div class="container-fluid main_content px-2">
+      <!-- Modal -->
+      <div class="modal fade modal-l" id="feedbackmodal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title" id="exampleModalLabel">List of User Feedback</h4><br>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <h6 class="modal-title" >Overall Average Rating of User Feedback: <b> {{avg_fbrating | safe}} </b></h6>
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th class="col w-25">Date</th>
+                    <th class="col w-50">Comment</th>
+                    <th class="col w-25">Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fbreclist in fbrecord %}
+                  <tr>
+                    <td>{{fbreclist.FBdatetime}}</td>
+                    <td>{{fbreclist.FBComment}}</td>
+                    <td>{{fbreclist.FBRating}}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="row g-3">
         <div class="text-center header-title h5 p-2">
           E-Commerce Recommender System for Choosing Electronic Devices Using Generative A.I with Predictive, Prescriptive and Data Analytics
-          </div>
+        </div>
         
         <!-- Search Bar -->
         <div class="col-12">
@@ -115,7 +154,7 @@
             <div class="card-header card-bgcolor-head"><i class="fa-solid fa-circle-info"></i> CSV file Format</div>
               <div class="card-body"> 
                 <b> Note and Instruction </b>
-                <div class=mb-1" style="font-size: smaller;">
+                <div class="mb-1" style="font-size: smaller;">
                   Upload CSV file with the following format:
                   <table class="table table-striped">
                         <td scope="col">Username</td>
@@ -188,13 +227,13 @@
                     URL of Image 1 <input type="text" name="txturldisplay1" size="100" >
                   </div>
 
-                   <div class="d-block p-1"" > 
+                   <div class="d-block p-1" > 
                     URL of Image 2 <input type="text" name="txturldisplay2" size="100" >
                   </div>
-                  <div class="d-block p-1"" > 
+                  <div class="d-block p-1" > 
                     URL of Image 3 <input type="text" name="txturldisplay3" size="100" >
                   </div>                  
-                  <div class="d-block p-1"" > 
+                  <div class="d-block p-1" > 
                     URL of Image 4 <input type="text" name="txturldisplay4" size="100" >
                   </div>
                   <br>
@@ -217,7 +256,11 @@
                 </div>
           </div>   
         </div> -->
-        <div class="col-12 footer-title" style="height: 50px;">System Design and features for Dissertation study. <br> Develop By: Jherold Valdoz</div>
+        <div class="col-12 footer-title" style="height: 50px;">
+          System Design and features for Dissertation study. <br> 
+          Develop By: Jherold Valdoz  <a href="#" data-bs-toggle="modal" data-bs-target="#feedbackmodal"> View Feedback</a>
+
+        </div>
 
         </div>
         <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
