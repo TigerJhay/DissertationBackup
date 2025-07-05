@@ -20,7 +20,7 @@ import  mysql.connector
 nltk.download('punkt')
 nltk.download('wordnet')
 nltk.download('omw-1.4') 
-
+import os
 gc.collect()
 
 app = Flask(__name__)
@@ -38,6 +38,23 @@ countvector = joblib.load("DT_Vector2.pkl")
 with open('vocab.json', 'r') as f:
     vocab = json.load(f)
 
+# Global variables
+global_table_name = "Generic"
+list_attrib = []
+
+# Repository folder for uploads
+UPLOAD_FOLDER = 'static/gadgetimageuploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'jfif', 'bmp'}
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+
+# Ensure the upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+from werkzeug.utils import secure_filename
+import uuid
+
 #Load LSTM Model
 class LSTMClassifier(nn.Module):
     def __init__(self, vocab_size, embed_dim, hidden_dim):
@@ -54,7 +71,7 @@ class LSTMClassifier(nn.Module):
         return out
     
 lstm_model = LSTMClassifier(vocab_size=len(vocab), embed_dim=32, hidden_dim=64)
-lstm_model.load_state_dict(torch.load("lstm_model2.pt", map_location=torch.device("cpu")))
+lstm_model.load_state_dict(torch.load("lstm_model3.pt", map_location=torch.device("cpu")))
 lstm_model.eval()
 
 
@@ -138,6 +155,65 @@ def sub_datacleaning_reco(temp_df):
 
     return temp_df
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/imgUpload", methods=['GET', 'POST'])
+def imageupload():
+    print(">>> PASSED IMAGE UPLOAD AREA 1")
+    uploaded_files = []
+    if request.method == 'POST':
+        print(">>> PASSED IMAGE UPLOAD AREA 2")
+        for file_key in ['imagefileurl1', 'imagefileurl2', 'imagefileurl3', 'imagefileurl4']:
+            if file_key in request.files:
+                print(">>> PASSED IMAGE UPLOAD AREA 3")
+                file = request.files[file_key]
+                if file and allowed_file(file.filename):
+                    print(">>> PASSED IMAGE UPLOAD AREA 4")
+                    # Get the file extension
+                    ext = file.filename.rsplit('.', 1)[1].lower()
+                    # Generate a unique filename using UUID
+                    unique_filename = f"{uuid.uuid4().hex}.{ext}"
+                    print(unique_filename + " >> unique file name")
+                    # filename = secure_filename(file.filename)
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+                    # file.save(file_path)
+                    file_url = url_for('static', filename=f'gadgetimageuploads/{unique_filename}')
+                    uploaded_files.append(file_url)
+
+                    print("FILE KEY VALUE >> " + file_key)
+                    if file_key == "imagefileurl1":
+                        str_file_url1 = file_url
+                    elif file_key == "imagefileurl2":
+                        str_file_url2 = file_url
+                    elif file_key == "imagefileurl3":
+                        str_file_url3 = file_url
+                    elif file_key == "imagefileurl4":
+                        str_file_url4 = file_url
+                    else:
+                        file_url == "" 
+                
+                else:
+                    return "Invalid file type or file too large", 400
+        print(f"values >> { str_file_url1} >> { str_file_url2} >> { str_file_url3} >> { str_file_url4} ")
+        brand =  session["ndsbrands"]
+        gadgettype = session["ndstype"]
+        model = session["ndsmodel"]
+
+        with sqlengine.begin() as conn:
+            sqlstring = text("INSERT INTO image_paths (Model, Brand, Type, Path, Path2, Path3, Path4) VALUES (:model, :brand, :type, :path1, :path2, :path3, :path4)")
+            conn.execute(sqlstring, {
+                'model': model,
+                'brand': brand,
+                'type': gadgettype,
+                'path1': str_file_url1,
+                'path2': str_file_url2,
+                'path3': str_file_url3,
+                'path4': str_file_url4
+            })
+
+    return render_template('newdataset.html', uploaded_files=uploaded_files)
+
 @app.route("/generaterecomendation", methods=["GET", "POST"])
 def modelrecommendation():
     flag = request.form['flag']
@@ -166,16 +242,21 @@ def modelrecommendation():
     item_desc = brand +  " " + gadgetmodel
     mysqlconn.reconnect()
     sqlstring = "SELECT * FROM gadget_reviews where Brand='" +brand+"' and Type='"+type+"' and Model='"+gadgetmodel + "'"
+    # sqlstring = "SELECT * FROM gadget_reviews where Brand='Apple' and Type='Ear Buds' and Model='Airpods'"
+
     temp_df = pd.read_sql(sqlstring, mysqlconn)
     
     temp_df = sub_datacleaning(temp_df)
     print ("----->>> COMPLETED - DATA CLEANED")
     
-    attrib_table(temp_df)
+    attrib_table(temp_df, type)
     print ("----->>> COMPLETED - ATTRIB TABLE")
     
     summary_reco, featured_reco, detailed_reco = sub_recommendation_summary(gadgetmodel)
     print ("----->>> COMPLETED - SUMMARY RECOMMENDATION")
+    
+    attrib_graph(summary_reco)
+    print ("----->>> COMPLETED - SUMMARY RECOMMENDATION GRAPH")
 
     airesult = sub_AIresult(item_desc)
     print ("----->>> COMPLETED - GENERATE AI GADGET SPECS SUMMARY")
@@ -183,8 +264,6 @@ def modelrecommendation():
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
     print ("----->>> COMPLETED - GENERATE AI SHOPS LOCATIONS")
 
-    attrib_graph(summary_reco)
-    print ("----->>> COMPLETED - SUMMARY RECOMMENDATION GRAPH")
 
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brand)
     print ("----->>> COMPLETED - IMAGES LOADED")
@@ -419,43 +498,49 @@ def modelcomplete():
     return render_template("index.html", selectedtype = session["type"], selectbrand= session["brands"], selectedmodel = session["model"])
 
 def sub_recommendation_summary(gadgetmodel):
+    # gadgetmodel = 'AirPods'
+    # global_table_name = "attrib_headset"
     mysqlconn.close()
     mysqlconn._open_connection()
     with sqlengine.begin() as connection:
         temp_df_count = pd.read_sql_query(sqlalch.text("SELECT count(model) as count FROM gadget_reviews where Model='"+gadgetmodel+"'"), connection)
 
     with sqlengine.begin() as connection:
-        temp_df_reco = pd.read_sql(sqlalch.text("SELECT * FROM attribute_table where Model='"+gadgetmodel+"'"), connection)
-     
-    batt = temp_df_reco["Batt_PR"][0]
-    scr = temp_df_reco["Scr_PR"][0]
-    spd = temp_df_reco["Spd_PR"][0]
-    mem = temp_df_reco["Mem_PR"][0]
-    aud = temp_df_reco["Aud_PR"][0]
-    featured_reco = ""  
-    sub_featured = ""
-    if batt > scr and batt > spd and batt > mem and batt > aud:
-        featured_reco += "Battery is one of the best feature."
-        sub_featured += "Essentially, a gadget's battery life is a key metric for buyers, shaping their perception of the device's practicality, ease of use, and overall desirability. A long-lasting battery is a key feature for many users, especially those who are always on the go or who use their devices for long periods of time. A long battery life is also a key selling point for many devices, as it can help differentiate a product from its competitors and attract more customers. In addition, a long battery life can help improve a device's overall user experience, as it can reduce the need for frequent charging and allow users to use their devices for longer periods of time without interruption."
-    elif scr > batt and scr > spd and scr > mem and scr > aud:
-        featured_reco += "Screen size and/or dsplay is one of the best feature"
-        sub_featured +=  "Larger, high-resolution screens provide a more immersive and enjoyable experience for watching videos, playing games, and browsing photos. A larger screen also makes it easier to read text and view images, which can be especially useful for users with poor eyesight or who use their devices for extended periods of time. In addition, a high-resolution screen can display more detail and provide a sharper, clearer image, which can enhance the overall viewing experience. A high-quality screen can also help improve a device's overall user experience, as it can make text and images easier to read and provide a more vibrant and engaging display."
-    elif spd > batt and spd > scr and spd > mem and spd > aud:
-        featured_reco += "Speed or response is one of the best feature"
-        sub_featured +=  "A fast processor can help improve a device's overall performance and responsiveness, making it more efficient and enjoyable to use. A fast processor can help reduce lag and improve the speed of tasks such as opening apps, browsing the web, and playing games. A fast processor can also help improve a device's multitasking capabilities, allowing users to run multiple apps simultaneously without experiencing slowdowns or performance issues. In addition, a fast processor can help improve a device's overall user experience, as it can make the device more responsive and enjoyable to use."
-    elif mem > batt and mem > scr and mem > spd and mem > aud:
-        featured_reco += "Memory is one of the best feature"
-        sub_featured += "Sufficient memory, particularly RAM (Random Access Memory), allows gadgets to handle multiple tasks simultaneously without slowing down. This is essential for smooth operation when running various apps or programs. Memory is also important for storing data, such as photos, videos, and music, as well as for running the operating system and other essential software. A gadget with sufficient memory will be able to run smoothly and efficiently, providing a better user experience."
-    elif aud > batt and aud > scr and aud > spd and aud > mem:
-        featured_reco += "Audio is one of the best feature"
-        sub_featured += "High-fidelity audio transforms the experience of watching movies, listening to music, and playing games. Clear, rich sound creates a more immersive and engaging environment. High-quality audio can also enhance the overall user experience, making it more enjoyable and satisfying. In addition, high-fidelity audio can help improve a device's overall performance, as it can provide a more realistic and engaging sound experience. High-quality audio can also help differentiate a product from its competitors and attract more customers."
-    else:
-        featured_reco += "Neither of the features is good or bad"
-        sub_featured += "Over all, the gadget is neither good nor bad. It is just an average gadget."
-        
-    summary_reco = [ temp_df_reco["Batt_PR"][0], temp_df_reco["Scr_PR"][0], temp_df_reco["Spd_PR"][0], temp_df_reco["Mem_PR"][0], temp_df_reco["Aud_PR"][0] ] 
+        temp_df_reco = pd.read_sql(sqlalch.text(f"SELECT * FROM {global_table_name} where Model='"+gadgetmodel+"'"), connection)        
+    
+    if global_table_name == "attrib_headset":
+        attrib_columns = ["Price", "Sound_Q", "Comfort", "Microphone", "Connectivity","Battery","NoiseCancellation","Design","Controls"]
+    elif global_table_name == "attrib_smartphone":
+        attrib_columns = ["Price","Battery","Camera","Performance", "Storage", "Display","OS", "Features"]
+    elif global_table_name == "attrib_smartwatch":
+        attrib_columns = ["Price", "Battery", "Design","Display","Health","Sports","Smart","Compatibility","Quality"]
+    else: #Generic
+        attrib_columns = ["Battery", "Screen", "Speed", "Memory", "Audio"]
+    
 
-    return summary_reco, featured_reco, sub_featured 
+    temp_df_reco['highest_value'] = temp_df_reco[attrib_columns].max(axis=1)
+    temp_df_reco['highest_colname'] = temp_df_reco[attrib_columns].idxmax(axis=1)
+
+    print ("Max value Value >> " + str(temp_df_reco['highest_value']))
+    print ("Max value column name >> " + str(temp_df_reco['highest_colname']))
+
+    head_featured = ""  
+    sub_featured = ""
+    highest_col_name = ''.join(temp_df_reco['highest_colname'])
+
+    with sqlengine.begin() as connection:
+        desc_message = pd.read_sql(sqlalch.text(f"SELECT * FROM featured_desc where Attrib_Name='"+highest_col_name+"'"), connection)        
+
+    
+    head_featured = ''.join(desc_message["Head_Featured_Desc"])
+    sub_featured = ''.join(desc_message["Sub_Featured_Desc"])
+
+    # summary_reco = [ temp_df_reco["Batt_PR"][0], temp_df_reco["Scr_PR"][0], temp_df_reco["Spd_PR"][0], temp_df_reco["Mem_PR"][0], temp_df_reco["Aud_PR"][0]] 
+    temp_df_reco = temp_df_reco.drop(columns=['index', 'Model', 'highest_value','highest_colname'])
+    melt_df_data = temp_df_reco.melt(var_name = 'Col_Names', value_name = 'Values')
+    summary_reco = melt_df_data
+
+    return summary_reco, head_featured, sub_featured 
     
 def sub_AIresult(item_desc):
     # item_desc = "JBL T110BT"
@@ -565,13 +650,18 @@ def sub_generate_rating(dt_rating, lstm_rating, gadgetmodel):
     return (f"Estimated Star Rating: {scaled_rating} / 5  {visual_stars}"
     f"\n This gadget '{gadgetmodel} is ' {'Recommend' if overall_rating >= 0.5 else 'Not Recommend'} based on the system evaluation.")
 
-def attrib_table(temp_df_attrib):
+def attrib_table(temp_df_attrib, gadgettype):
     #--------------------------------------------------------------------------------------------
-    #Extracting phrases for creating corpora that will be use in decision tree recommendation
+    #Extracting phrases for creating corpora that will be use in data visualization
     # FF: temp_df_attrib here is a cleaned dataset came from datacleaning function
     #--------------------------------------------------------------------------------------------
-    df_reviews = temp_df_attrib.drop(axis=1, columns=["Date"])
+    # temp_df_attrib = temp_df
+    # gadgettype = "Ear Buds"
+    df_reviews = temp_df_attrib.drop(axis=1, columns=["Date", "Rev_No", "Username"])
     df = pd.DataFrame()
+
+
+
     def extract_attrib(attrib_value):
         df_temp = df_reviews.loc[df_reviews["Reviews"].str.contains(attrib_value, regex=False)]
         df_temp["Reviews"] = df_temp["Reviews"].str.replace('[0-9]', "", regex=True)
@@ -580,12 +670,53 @@ def attrib_table(temp_df_attrib):
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}battery\b(?:\W+\w+){0,2})')
         elif attrib_value == "speed":
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}speed\b(?:\W+\w+){0,2})')
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}performance\b(?:\W+\w+){0,2})')
         elif attrib_value == "memory":
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}memory\b(?:\W+\w+){0,2})')
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}RAM\b(?:\W+\w+){0,2})')
         elif attrib_value == "screen":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}display\b(?:\W+\w+){0,2})')
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}screen\b(?:\W+\w+){0,2})')
-        elif attrib_value == "screen":
+        elif attrib_value == "audio":
             df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}audio\b(?:\W+\w+){0,2})')
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}sound\b(?:\W+\w+){0,2})')
+        elif attrib_value == "comfort":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}comfort\b(?:\W+\w+){0,2})')
+        elif attrib_value == "microphone":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}microphone\b(?:\W+\w+){0,2})')  
+        elif attrib_value == "connectivity":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}connectivity\b(?:\W+\w+){0,2})')
+        elif attrib_value == "design":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}design\b(?:\W+\w+){0,2})')
+        elif attrib_value == "controls":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}controls\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "noisecancellation":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}noise cancel\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "price":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}price\b(?:\W+\w+){0,2})')
+        elif attrib_value == "camera":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}camera\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "performance":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}performance\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "storage":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}storage\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "os":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}os\b(?:\W+\w+){0,2})')
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}operating system\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "features":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}features\b(?:\W+\w+){0,2})')
+        elif attrib_value == "connectivity":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}connectivity\b(?:\W+\w+){0,2})')                              
+        elif attrib_value == "health":
+           df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}health\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "sports":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}sports\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "smart":
+            df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}smart\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "compatibility":
+          df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}compatibility\b(?:\W+\w+){0,2})')                          
+        elif attrib_value == "quality":
+          df_temp["Reviews"] = df_temp["Reviews"].str.extract(r'\b((?:\w+\W+){0,2}quality\b(?:\W+\w+){0,2})')                          
         else:
             df_temp["Attribute"] = attrib_value
         
@@ -593,56 +724,138 @@ def attrib_table(temp_df_attrib):
         df_temp = df_temp.drop_duplicates(subset="Reviews")
         df_temp["Attribute"] = attrib_value
         return df_temp
+    print (gadgettype + " >> Gadget type")
+    global list_attrib
+    if gadgettype == "Ear Buds" or gadgettype == "Earphone":
+        list_attrib = ["price", "audio", "comfort", "microphone", "connectivity", "battery","noisecancellation","design","controls" ]
+    elif gadgettype == "Smartphone" or gadgettype == "Tablet":
+        list_attrib = ["price","battery","camera","performance", "storage", "screen","OS"]
+    elif gadgettype == "Smartwatch":
+        list_attrib = ["price", "battery", "design","display","health","sports","smart","compatibility","quality"]
+    else: #Generic
+        list_attrib = ["battery", "screen", "speed", "memory", "audio"]
 
-    list_attrib = ["battery", "screen", "speed", "memory", "audio"]
     for attrib in list_attrib:
         df = pd.concat([df, extract_attrib(attrib)])
-
-    attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR","Batt_NR", "Scr_PR", "Scr_NR", "Spd_PR", "Spd_NR", "Mem_PR", "Mem_NR", "Aud_PR", "Aud_NR"])
+    # df[df["Attribute"] == "memory"]
+    # attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR", "Scr_PR", "Spd_PR", "Mem_PR", "Aud_PR"])
+    if gadgettype == "Ear Buds" or gadgettype == "Earphone":
+        attrib_matrix = pd.DataFrame(columns=["Model", "Price", "Sound_Q", "Comfort", "Microphone", "Connectivity","Battery","NoiseCancellation","Design","Controls"])
+    elif gadgettype == "Smartphone" or gadgettype == "Tablet":
+        attrib_matrix = pd.DataFrame(columns=["Model", "Price", "Battery", "Camera", "Performance", "Storage","Display","OS","Features"])
+    elif gadgettype == "Smartwatch":
+        attrib_matrix = pd.DataFrame(columns=["Model", "Price", "Battery", "Design", "Display", "Health","Sports","Smart","Compatibility", "Quality"])
+    else: #Generic Gadget
+        attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR", "Scr_PR", "Spd_PR", "Mem_PR", "Aud_PR"])
     gadget_list = df_reviews["Model"].unique()
 
+    
     def convert_to_matrix(gadget_model):
+
         df_model = df.loc[df["Model"].str.contains(gadget_model)]
         df_rev = df_model.loc[df_model["Reviews"].str.contains("battery")]
-        batt_rpos = df_rev["Rating"].value_counts().get(1,0)
-        batt_rneg = df_rev["Rating"].value_counts().get(0,0)
+        battery = df_rev["Rating"].value_counts().get(1,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("screen")]
-        scr_rpos = df_rev["Rating"].value_counts().get(1,0)
-        scr_rneg = df_rev["Rating"].value_counts().get(0,0)
+        screen = df_rev["Rating"].value_counts().get(1,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("speed")]
-        spd_rpos = df_rev["Rating"].value_counts().get(1,0)
-        spd_rneg = df_rev["Rating"].value_counts().get(0,0)
+        speed = df_rev["Rating"].value_counts().get(1,0)
 
         df_rev = df_model.loc[df_model["Reviews"].str.contains("memory")]
-        mem_rpos = df_rev["Rating"].value_counts().get(1,0)
-        mem_rneg = df_rev["Rating"].value_counts().get(0,0)
+        memory = df_rev["Rating"].value_counts().get(1,0)
         
         df_rev = df_model.loc[df_model["Reviews"].str.contains("audio")]
-        aud_rpos = df_rev["Rating"].value_counts().get(1,0)
-        aud_rneg = df_rev["Rating"].value_counts().get(0,0)
+        audio = df_rev["Rating"].value_counts().get(1,0)
 
-        row_value = [gadget_model, batt_rpos, batt_rneg, scr_rpos, scr_rneg, spd_rpos, spd_rneg, mem_rpos, mem_rneg, aud_rpos, aud_rneg]    
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("comfort")]
+        comfort = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("microphone")]
+        microphone = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("connectivity")]
+        connectivity = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("design")]
+        design = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("controls")]
+        controls = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("noisecancellation")]
+        noisecancellation = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("price")]
+        price = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("camera")]
+        camera = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("performance")]
+        performance = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("storage")]
+        storage = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("os")]
+        os = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("features")]
+        features = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("connectivity")]
+        connectivity = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("health")]
+        health = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("sports")]
+        sports = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("smart")]
+        smart = df_rev["Rating"].value_counts().get(1,0)
+        
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("compatibility")]
+        compatibility = df_rev["Rating"].value_counts().get(1,0)
+
+        df_rev = df_model.loc[df_model["Reviews"].str.contains("quality")]
+        quality = df_rev["Rating"].value_counts().get(1,0)
+        
+        global global_table_name
+        if gadgettype == "Ear Buds" or gadgettype == "Earphone":
+            row_value= [gadget_model,price, audio, comfort, microphone, connectivity, battery,noisecancellation,design,controls]
+            global_table_name = "attrib_headset"
+        elif gadgettype == "Smartphone" or gadgettype == "Tablet":
+            row_value = [gadget_model, price, battery, camera, performance, storage, screen, os, features]
+            global_table_name = "attrib_smartphone"
+        elif gadgettype == "Smartwatch":
+            row_value = [gadget_model, price, battery, design, screen, health, sports, smart, compatibility, quality]
+            global_table_name = "attrib_smartwatch"
+        else:
+            row_value = [gadget_model, battery, screen, speed, memory, audio]
+        
+        print(gadgettype + " >> gadget type inside def")
+        print (global_table_name + " >> global table name INSIDE DEF")
         return row_value
-
+    
     for colname in gadget_list:
         attrib_matrix.loc[len(attrib_matrix)] = convert_to_matrix(colname)
-    attrib_matrix.to_sql(con=sqlengine, name="attribute_table", if_exists='replace', index=True)
 
-def attrib_graph(data_count):
+    print(gadget_list + " >> gadget list value")
+    print (global_table_name + " >> global table name OUTSIDE DEF")
+    attrib_matrix.to_sql(con=sqlengine, name= global_table_name, if_exists='replace', index=True)
 
+def attrib_graph(data_record):
+    # data_record = summary_reco
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    gadgetnames = ['Battery', 'Screen', 'Speed', 'RAM', 'Audio']
-    bar_labels = ['Battery', 'Screen', 'Speed', 'RAM','Audio']
-    bar_colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange', 'tab:purple']
 
-    ax.bar(gadgetnames, data_count, label=bar_labels, color=bar_colors)
-    ax.set_ylabel('User Reviews')
-    ax.set_title('Summary of User Gadget Reviews')
-    ax.legend(title='Gadget Labels')
-    plt.savefig(".\static\HTML\images\Summary_Graph.png")
+    # fig, ax = plt.subplots()
+    plt.figure(figsize=(10,6))
+    plt.barh(data_record['Col_Names'], data_record['Values'], color='Blue')
+    plt.xlabel('No. of User Reviews')
+    plt.title('Summary of User Gadget Reviews')
+    plt.savefig("./static/HTML/images/Summary_Graph.png")
     plt.close()
 
 @app.route("/otherselection", methods=["GET","POST"])

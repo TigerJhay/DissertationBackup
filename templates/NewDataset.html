@@ -13,10 +13,10 @@
               {
                 const myform = document.forms["imgURLUpload"];
                 const form = document.getElementById('imgURLUpload');
-                const urlImg1 = myform.txturldisplay1.value;
-                const urlImg2 = myform.txturldisplay2.value;
-                const urlImg3 = myform.txturldisplay3.value;
-                const urlImg4 = myform.txturldisplay4.value;
+                const urlImg1 = myform.imagefileurl1.value;
+                const urlImg2 = myform.imagefileurl2.value;
+                const urlImg3 = myform.imagefileurl3.value;
+                const urlImg4 = myform.imagefileurl4.value;
                 const modelselect = "{{selectedmodel}}"
                 if(!urlImg1 && !urlImg2&& !urlImg3 && !urlImg4){
                   alert ("No images attached. No need to upload image")
@@ -30,7 +30,7 @@
 
                 if (confirm("image URL should have values \n If no URL values where place, it will saved the blank field.") == true){
 
-                  form.action = "imgURLUpload";
+                  form.action = "imgUpload";
                   form.submit();
                   alert("URL of imgages saved.")
                 }
@@ -215,7 +215,7 @@
               </div>
                 <!-- End Panel -->
 
-                <form name="imgURLUpload" action="/imgURLUpload" method="POST" ID="imgURLUpload">
+                <form name="imgURLUpload" action="/imgURLUpload" method="POST" ID="imgURLUpload" enctype="multipart/form-data">
                   <!-- <div class="cust_uploadfile d-inline" id="cust_drop-area-container">
                     <label for="cust_input-file" id="cust_drop-area">
                         <div id="cust_image-preview"></div>
@@ -223,19 +223,55 @@
                     </div>
                   <input type="text" id="cust_url-display" name="txturldisplay1" size="100" hidden>
                    -->
-                   <div class="d-block p-1" > 
-                    URL of Image 1 <input type="text" name="txturldisplay1" size="100" >
+                  <div class="d-block p-1">
+                    <div class="input-group mb-1 w-50">
+                      <input name="imagefileurl1" type="file" class="form-control" id="inputGroupImg1" accept="image/*">
+                      <label class="input-group-text" for="inputGroupImg1">Upload</label>
+                    </div>
                   </div>
 
                    <div class="d-block p-1" > 
-                    URL of Image 2 <input type="text" name="txturldisplay2" size="100" >
+                    <div class="input-group mb-1 w-50">
+                      <input name="imagefileurl2"  type="file" class="form-control" id="inputGroupImg2" accept="image/*">
+                      <label class="input-group-text" for="inputGroupImg2">Upload</label>
+                    </div>
                   </div>
                   <div class="d-block p-1" > 
-                    URL of Image 3 <input type="text" name="txturldisplay3" size="100" >
+                    <div class="input-group mb-1 w-50">
+                      <input name="imagefileurl3"  type="file" class="form-control" id="inputGroupImg3" accept="image/*">
+                      <label class="input-group-text" for="inputGroupImg3">Upload</label>
+                    </div>
                   </div>                  
                   <div class="d-block p-1" > 
-                    URL of Image 4 <input type="text" name="txturldisplay4" size="100" >
+                    <div class="input-group mb-1 w-50">
+                      <input name="imagefileurl4"  type="file" class="form-control" id="inputGroupImg4" accept="image/*">
+                      <label class="input-group-text" for="inputGroupImg4">Upload</label>
+                    </div>
                   </div>
+
+                  <script>
+                    // File type and 2MB max size validation for multiple inputs
+                    document.querySelectorAll('input[type="file"]').forEach(function(input) {
+                        input.addEventListener('change', function() {
+                            const file = this.files[0];
+                            if (file) {
+                                // Check file type
+                                if (!file.type.startsWith('image/')) {
+                                    alert('Please upload an image file only.');
+                                    this.value = '';
+                                    return;
+                                }
+                                // Check file size (max 2MB)
+                                if (file.size > 2 * 1024 * 1024) {
+                                    alert('File size exceeds 2MB limit.');
+                                    this.value = '';
+                                    return;
+                                }
+                            }
+                        });
+                    });
+                  </script>
+
                   <br>
                   <div class="my-0"><h6>
                     Upload image URL for:{{selectbrand}} {{selectedtype}} {{selectedmodel}} - {{notif}}</h6> 

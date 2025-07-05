@@ -246,31 +246,44 @@
           </div>
 
           <div class="col-5">
-            <div class="card card-bgcolor-body">
-              <div class="card-header card-bgcolor-head"><i class="fa-solid fa-circle-info"></i> Recommendation based on reviews of users and buyers</div>
-                <div class="card-body col overflow-auto" style="height: 300px;">
-                  <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
-                    <p class="card-text">
-                        {{str_details}}
-                    </p>
-                </div>
-            </div>
-          </div>
-
-          <div class="col-4">
-            <div class="card card-bgcolor-body">
+                        <div class="card card-bgcolor-body">
               <div class="card-header card-bgcolor-head"><i class="fa-solid fa-chart-simple"></i> Review summary</div>
                 <div class="card-body col" style="height: 300px;">
                   <!--<h6 class="card-title">Based on reviews of users and buyers</h6>-->
                     <!--<p class="card-text">-->
-                        <img src="{{summary_graph}}" class="h-100 border border-dark">
-                      <!--{% for str_recommendation in str_recommendation %}-->
+                        <img src="{{summary_graph}}" class="h-100 border border-dark" data-bs-toggle="modal" data-bs-target="#imageModal">
+                        
+                        <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content bg-dark">
+                              <div class="modal-header border-0">
+                                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body text-center">
+                                <img src="{{summary_graph}}" alt="Enlarged Image" class="img-fluid">
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!--{% for str_recommendation in str_recommendation %}-->
                       <!--  {{str_recommendation}} <br>-->
                       <!--{% endfor %}-->
                       <!--{% for message in get_flashed_messages() %}-->
                       <!--  {{message}}-->
                       <!--{% endfor %}-->
                     <!--</p>-->
+                </div>
+            </div>
+          </div>
+
+          <div class="col-4">
+            <div class="card card-bgcolor-body">
+              <div class="card-header card-bgcolor-head"><i class="fa-solid fa-circle-info"></i> Review summary Details</div>
+                <div class="card-body col overflow-auto" style="height: 300px;">
+                  <h6 class="card-title"> <b> {{str_featreco}}</b></h6>
+                    <p class="card-text">
+                        {{str_details}}
+                    </p>
                 </div>
             </div>
           </div>

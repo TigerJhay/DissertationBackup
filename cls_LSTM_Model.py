@@ -177,9 +177,10 @@ for epoch in range(20):
         total_loss += loss.item()
     print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
     
-evaluate_lstm_model_pytorch(model, test_loader, device='cpu')
+# evaluate_lstm_model_pytorch(model, test_loader, device='cpu')
+
 # Save the trained model -----
-# torch.save(model.state_dict(), "lstm_model2.pt")
+torch.save(model.state_dict(), "lstm_model3.pt")
 
 # Inference function -----
 def predict_product(product_name):
