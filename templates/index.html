@@ -39,6 +39,8 @@
     }
 
     function validateotherselection(gadgetmodel){
+
+
       const form = document.getElementById('otherRecommendation')
       const jsmodel =  gadgetmodel
       alert (jsmodel);
@@ -53,6 +55,12 @@
     }
 
     function validateUserInput(){
+      
+      const fb_model ="{{complete_gadget}}";
+      if (fb_model.length < 1){
+        alert ("You should use the system first before giving feedback");
+        return false;
+      }
       //validateselection();
 
       const myform = document.forms["userFeedback"];

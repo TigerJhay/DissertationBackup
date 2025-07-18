@@ -39,7 +39,7 @@ with open('vocab.json', 'r') as f:
     vocab = json.load(f)
 
 # Global variables
-global_table_name = "Generic"
+global_table_name = "generic"
 list_attrib = []
 
 # Repository folder for uploads
@@ -263,7 +263,6 @@ def modelrecommendation():
 
     shop_loc_list = sub_AIresult_Shop_Loc(item_desc)
     print ("----->>> COMPLETED - GENERATE AI SHOPS LOCATIONS")
-
 
     dev_images1,dev_images2,dev_images3,dev_images4 = sub_OpenAI(gadgetmodel, type, brand)
     print ("----->>> COMPLETED - IMAGES LOADED")
@@ -660,8 +659,6 @@ def attrib_table(temp_df_attrib, gadgettype):
     df_reviews = temp_df_attrib.drop(axis=1, columns=["Date", "Rev_No", "Username"])
     df = pd.DataFrame()
 
-
-
     def extract_attrib(attrib_value):
         df_temp = df_reviews.loc[df_reviews["Reviews"].str.contains(attrib_value, regex=False)]
         df_temp["Reviews"] = df_temp["Reviews"].str.replace('[0-9]', "", regex=True)
@@ -726,7 +723,7 @@ def attrib_table(temp_df_attrib, gadgettype):
         return df_temp
     print (gadgettype + " >> Gadget type")
     global list_attrib
-    if gadgettype == "Ear Buds" or gadgettype == "Earphone":
+    if gadgettype == "Ear Buds" or gadgettype == "Earphone" or gadgettype == "Headphone":
         list_attrib = ["price", "audio", "comfort", "microphone", "connectivity", "battery","noisecancellation","design","controls" ]
     elif gadgettype == "Smartphone" or gadgettype == "Tablet":
         list_attrib = ["price","battery","camera","performance", "storage", "screen","OS"]
@@ -739,7 +736,7 @@ def attrib_table(temp_df_attrib, gadgettype):
         df = pd.concat([df, extract_attrib(attrib)])
     # df[df["Attribute"] == "memory"]
     # attrib_matrix = pd.DataFrame(columns=["Model", "Batt_PR", "Scr_PR", "Spd_PR", "Mem_PR", "Aud_PR"])
-    if gadgettype == "Ear Buds" or gadgettype == "Earphone":
+    if gadgettype == "Ear Buds" or gadgettype == "Earphone" or gadgettype == "Headphone":
         attrib_matrix = pd.DataFrame(columns=["Model", "Price", "Sound_Q", "Comfort", "Microphone", "Connectivity","Battery","NoiseCancellation","Design","Controls"])
     elif gadgettype == "Smartphone" or gadgettype == "Tablet":
         attrib_matrix = pd.DataFrame(columns=["Model", "Price", "Battery", "Camera", "Performance", "Storage","Display","OS","Features"])
@@ -751,7 +748,6 @@ def attrib_table(temp_df_attrib, gadgettype):
 
     
     def convert_to_matrix(gadget_model):
-
         df_model = df.loc[df["Model"].str.contains(gadget_model)]
         df_rev = df_model.loc[df_model["Reviews"].str.contains("battery")]
         battery = df_rev["Rating"].value_counts().get(1,0)
@@ -944,7 +940,7 @@ def evaluate_lstm_model_pytorch(lstm_model, test_loader, label_encoder, device='
 
 def sub_KMeans(gadgettype):
     try:
-        gadgettype = "Smartphone"
+        # gadgettype = "Smartphone"
         kmeans_df = pd.read_sql("SELECT Rev_No, Model, Rating FROM gadget_reviews where Type='" + gadgettype + "'", sqlengine)
         kmeans_df = kmeans_df.iloc[:10000,:]
         df_reco = kmeans_df[["Rev_No",'Model', 'Rating']]
